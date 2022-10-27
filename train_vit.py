@@ -22,29 +22,31 @@ import math
 import logging
 logger = logging.getLogger(__name__)
 
-model_dict = {'ViT-B_16':'vit_base_patch16_224_in21k', 
-'ViT-S_16':'vit_small_patch16_224_in21k',
-'ViT-Ti_16':'vit_tiny_patch16_224_in21k'}
+model_dict = {
+    'ViT-B_16': 'vit_base_patch16_224_in21k',
+    'ViT-S_16': 'vit_small_patch16_224_in21k',
+    'ViT-Ti_16': 'vit_tiny_patch16_224_in21k'}
+
 
 def save_model(args, model):
     model_to_save = model.module if hasattr(model, 'module') else model
     model_checkpoint_dir = os.path.join(args.output_dir, args.name, args.dataset, args.model_arch)
     checkpoint_path = os.path.join(model_checkpoint_dir,args.model_type + ".bin")
-    if os.path.exists(checkpoint_path) != True:
-         os.makedirs(model_checkpoint_dir, exist_ok=True)
+    if not os.path.exists(checkpoint_path):
+        os.makedirs(model_checkpoint_dir, exist_ok=True)
     torch.save(model_to_save.state_dict(), checkpoint_path)
     logger.info("Saved model checkpoint")
 
 
 def setup(args):
     num_classes = 2
-    model_name =model_dict[args.model_type]
+    model_name = model_dict[args.model_type]
     model = timm.create_model(
         model_name,
         pretrained=True,
         num_classes=num_classes,
-        drop_rate = 0.1,
-        img_size = args.img_size
+        drop_rate=0.1,
+        img_size=args.img_size
     )
     model.reset_classifier(num_classes)
     model.to(args.device)
@@ -77,7 +79,7 @@ def valid(args, model, writer, test_loader, global_step):
     loss_fct = torch.nn.CrossEntropyLoss()
     for step, batch in enumerate(epoch_iterator):
         batch = tuple(t.to(args.device) for t in batch)
-        x, y,_ = batch; 
+        x, y, _ = batch
         with torch.no_grad():
             logits = model(x)
             eval_loss = loss_fct(logits, y)
@@ -153,7 +155,7 @@ def train_model(args):
                               disable=args.local_rank not in [-1, 0])
         for step, batch in enumerate(epoch_iterator):
             batch = tuple(t.to(args.device) for t in batch)
-            x, y, _ = batch; 
+            x, y, _ = batch
             logits = model(x)
             loss = cri(logits.view(-1, 2), y.view(-1))
             if args.batch_split > 1:

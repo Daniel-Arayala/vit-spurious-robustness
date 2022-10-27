@@ -12,6 +12,7 @@ import random
 import warnings
 warnings.filterwarnings("ignore")
 
+
 class WaterbirdDataset(Dataset):
     def __init__(self, data_correlation, split, root_dir, transform):
         self.split_dict = {
@@ -26,7 +27,7 @@ class WaterbirdDataset(Dataset):
             (1, 1): 3
         }
         self.split = split
-        self.root_dir  = root_dir
+        self.root_dir = root_dir
         self.dataset_name = "waterbird_complete"+"{:0.2f}".format(data_correlation)[-2:]+"_forest2water2"
         self.dataset_dir = os.path.join(self.root_dir, self.dataset_name)
         if not os.path.exists(self.dataset_dir):
@@ -39,6 +40,7 @@ class WaterbirdDataset(Dataset):
         self.place_array = self.metadata_df['place'].values
         self.filename_array = self.metadata_df['img_filename'].values
         self.transform = transform
+
     def __len__(self):
         return len(self.filename_array)
     
@@ -54,16 +56,19 @@ class WaterbirdDataset(Dataset):
         return img, y, self.env_dict[(y, place)]
 
 
-
-def get_waterbird_dataloader(data_label_correlation, split, transform, root_dir, batch_size):
-    kwargs = {'pin_memory': True, 'num_workers': 8, 'drop_last': True}
-    dataset = WaterbirdDataset(data_correlation=data_label_correlation, split=split, root_dir=root_dir, transform = transform)
-    dataloader = DataLoader(dataset=dataset,batch_size=batch_size, shuffle=True, **kwargs)
+def get_waterbird_dataloader(data_label_correlation, split, transform, root_dir, batch_size, num_workers):
+    kwargs = {'pin_memory': True, 'num_workers': num_workers, 'drop_last': True}
+    dataset = WaterbirdDataset(
+        data_correlation=data_label_correlation,
+        split=split, root_dir=root_dir, transform=transform)
+    dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, **kwargs)
     return dataloader
 
+
 def get_waterbird_dataset(data_label_correlation, split, transform, root_dir):
-    kwargs = {'pin_memory': True, 'num_workers': 8, 'drop_last': True}
-    dataset = WaterbirdDataset(data_correlation=data_label_correlation, split=split, root_dir=root_dir, transform = transform)
+    dataset = WaterbirdDataset(
+        data_correlation=data_label_correlation,
+        split=split, root_dir=root_dir, transform=transform)
     return dataset
 
 
