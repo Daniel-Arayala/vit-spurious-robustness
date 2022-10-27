@@ -16,12 +16,13 @@ from utils.comm_utils import set_seed
 
 logger = logging.getLogger(__name__)
 
+
 def main():
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument("--name", required=True,
                         help="Name of this run. Used for monitoring.")
-    parser.add_argument("--dataset", choices=["waterbirds","cmnist","celebA"], default="waterbirds",
+    parser.add_argument("--dataset", choices=["waterbirds", "cmnist", "celebA", "eyepacs"], default="waterbirds",
                         help="Which downstream task.")
     parser.add_argument("--model_arch", choices=["ViT", "BiT"],
                         default="ViT",
@@ -39,8 +40,7 @@ def main():
     parser.add_argument("--eval_every", default=100, type=int,
                         help="Run prediction on validation set every so many steps."
                              "Will always run one evaluation at the end of training.")
-
-    parser.add_argument("-lr","--learning_rate", default=3e-2, type=float,
+    parser.add_argument("-lr", "--learning_rate", default=3e-2, type=float,
                         help="The initial learning rate for SGD.")
     parser.add_argument("--weight_decay", default=0, type=float,
                         help="Weight deay if we apply some.")
@@ -50,13 +50,16 @@ def main():
                         help="Step of training to perform learning rate warmup for.")
     parser.add_argument("--max_grad_norm", default=1.0, type=float,
                         help="Max gradient norm.")
-
     parser.add_argument("--local_rank", type=int, default=-1,
                         help="local_rank for distributed training on gpus")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
     parser.add_argument('--batch_split', type=int, default=16,
                         help="Number of updates steps to accumulate before performing a backward/update pass.")
+    parser.add_argument('--num_workers', type=int, default=2,
+                        help="Number of workers to use for the DataLoader.")
+    parser.add_argument('--remove_crop_resize', action='store_true',
+                        help="Whether to remove the random crops and resizing of the input images.")
    
     args = parser.parse_args()
 
@@ -89,7 +92,6 @@ def main():
     elif args.model_arch == "ViT":
         from train_vit import train_model
         train_model(args)
-
 
 
 if __name__ == "__main__":
