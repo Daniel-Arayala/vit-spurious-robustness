@@ -1,18 +1,14 @@
-
 import logging
 import os
 
 import numpy as np
 import timm
 import torch
-import torch.distributed as dist
-from apex.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from utils.comm_utils import set_seed, AverageMeter, accuracy_func
 from utils.data_utils import get_loader_train
-from utils.dist_util import get_world_size
 from utils.scheduler import WarmupCosineSchedule
 
 logger = logging.getLogger(__name__)
@@ -53,7 +49,7 @@ def setup(args):
 
 def count_parameters(model):
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    return params/1000000
+    return params / 1000000
 
 
 def valid(args, model, writer, test_loader, global_step):
@@ -69,8 +65,7 @@ def valid(args, model, writer, test_loader, global_step):
     epoch_iterator = tqdm(test_loader,
                           desc="Validating... (loss=X.X)",
                           bar_format="{l_bar}{r_bar}",
-                          dynamic_ncols=True,
-                          disable=args.local_rank not in [-1, 0])
+                          dynamic_ncols=True)
     loss_fct = torch.nn.CrossEntropyLoss()
     for step, batch in enumerate(epoch_iterator):
         batch = tuple(t.to(args.device) for t in batch)
@@ -112,10 +107,9 @@ def train_model(args):
     args, model = setup(args)
     log_dir = os.path.join("logs", args.name, args.dataset, args.model_arch, args.model_type)
     os.makedirs(log_dir, exist_ok=True)
-    if args.local_rank in [-1, 0]:
-        writer = SummaryWriter(log_dir=log_dir)
+    writer = SummaryWriter(log_dir=log_dir)
     args.train_batch_size = args.train_batch_size // args.batch_split
-    train_loader, test_loader = get_loader_train(args)
+    train_loader, val_loader = get_loader_train(args)
     cri = torch.nn.CrossEntropyLoss().to(args.device)
     # Prepare optimizer and scheduler
     optimizer = torch.optim.SGD(model.parameters(),
@@ -124,17 +118,13 @@ def train_model(args):
                                 weight_decay=args.weight_decay)
     t_total = args.num_steps
     scheduler = WarmupCosineSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
-    # Distributed training
-    if args.local_rank != -1:
-        model = DDP(model, message_size=250000000, gradient_predivide_factor=get_world_size())
 
     # Train!
     logger.info("***** Running training *****")
     logger.info("  Total optimization steps = %d", args.num_steps)
     logger.info("  Instantaneous batch size per GPU = %d", args.train_batch_size)
     logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d",
-                args.train_batch_size * args.batch_split * (
-                    torch.distributed.get_world_size() if args.local_rank != -1 else 1))
+                args.train_batch_size * args.batch_split)
     logger.info("  Gradient Accumulation steps = %d", args.batch_split)
 
     model.zero_grad()
@@ -146,8 +136,7 @@ def train_model(args):
         epoch_iterator = tqdm(train_loader,
                               desc="Training (X / X Steps) (loss=X.X)",
                               bar_format="{l_bar}{r_bar}",
-                              dynamic_ncols=True,
-                              disable=args.local_rank not in [-1, 0])
+                              dynamic_ncols=True)
         for step, batch in enumerate(epoch_iterator):
             batch = tuple(t.to(args.device) for t in batch)
             x, y, _ = batch
@@ -169,11 +158,12 @@ def train_model(args):
                 epoch_iterator.set_description(
                     "Training (%d / %d Steps) (loss=%2.5f)" % (global_step, t_total, losses.val)
                 )
-                if args.local_rank in [-1, 0]:
-                    writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
-                    writer.add_scalar("train/lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
-                if global_step % args.eval_every == 0 and args.local_rank in [-1, 0]:
-                    accuracy = valid(args, model, writer, test_loader, global_step)
+
+                writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
+                writer.add_scalar("train/lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
+
+                if global_step % args.eval_every == 0:
+                    accuracy = valid(args, model, writer, val_loader, global_step)
                     if best_acc < accuracy:
                         save_model(args, model)
                         best_acc = accuracy
@@ -184,8 +174,6 @@ def train_model(args):
         losses.reset()
         if global_step % t_total == 0:
             break
-
-    if args.local_rank in [-1, 0]:
-        writer.close()
+    writer.close()
     logger.info("Best Accuracy: \t%f" % best_acc)
     logger.info("End Training!")

@@ -45,8 +45,6 @@ def get_resolution_from_dataset(dataset):
 
 
 def get_loader_train(args):
-    if args.local_rank not in [-1, 0]:
-        torch.distributed.barrier()
     mean, std = get_normalize_params(args)
     print(mean, std)
     if args.model_arch == "BiT":
@@ -57,7 +55,7 @@ def get_loader_train(args):
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
         ])
-        transform_test = transforms.Compose([
+        transform_val = transforms.Compose([
             transforms.Resize((crop, crop)),
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
@@ -69,7 +67,7 @@ def get_loader_train(args):
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
         ]
-        transform_test_steps = [
+        transform_val_steps = [
             transforms.Resize((args.img_size, args.img_size)),
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
@@ -77,23 +75,23 @@ def get_loader_train(args):
 
         if args.remove_crop_resize:
             transform_train_steps = transform_train_steps[1:]
-            transform_test_steps = transform_test_steps[1:]
+            transform_val_steps = transform_val_steps[1:]
 
         transform_train = transforms.Compose(transform_train_steps)
-        transform_test = transforms.Compose(transform_test_steps)
+        transform_val = transforms.Compose(transform_val_steps)
 
     if args.dataset == "celebA":
-        trainset = get_celebA_dataset(split="train", transform=transform_train,
+        train_set = get_celebA_dataset(split="train", transform=transform_train,
                                       root_dir='datasets')
-        testset = get_celebA_dataset(split="val", transform=transform_test,
+        val_set = get_celebA_dataset(split="val", transform=transform_val,
                                      root_dir='datasets')
     elif args.dataset == "waterbirds":
-        trainset = get_waterbird_dataset(data_label_correlation=0.95,
-                                         split="train", transform=transform_test,
+        train_set = get_waterbird_dataset(data_label_correlation=0.95,
+                                         split="train", transform=transform_val,
                                          root_dir='datasets')
 
-        testset = get_waterbird_dataset(data_label_correlation=0.95,
-                                        split="val", transform=transform_test, root_dir='datasets')
+        val_set = get_waterbird_dataset(data_label_correlation=0.95,
+                                        split="val", transform=transform_val, root_dir='datasets')
     elif args.dataset == "cmnist":
         trainset_1 = get_biased_mnist_dataset(root='./datasets/MNIST',
                                               data_label_correlation=0.45,
@@ -103,38 +101,35 @@ def get_loader_train(args):
                                               data_label_correlation=0.45,
                                               n_confusing_labels=1,
                                               train=True, partial=True, cmap="2", transform=transform_train)
-        testset = get_biased_mnist_dataset(root='./datasets/MNIST',
+        val_set = get_biased_mnist_dataset(root='./datasets/MNIST',
                                            data_label_correlation=0.45,
                                            n_confusing_labels=1,
-                                           train=False, partial=True, cmap="1", transform=transform_test)
-        trainset = trainset_1 + trainset_2
+                                           train=False, partial=True, cmap="1", transform=transform_val)
+        train_set = trainset_1 + trainset_2
 
     elif args.dataset == "eyepacs":
-        trainset = get_eyepacs_dataset(root_dir='datasets',
+        train_set = get_eyepacs_dataset(root_dir='datasets',
                                        dataset_name='reduced_eyepacs_resized_cropped',
                                        split='train', transform=transform_train)
 
-        testset = get_eyepacs_dataset(root_dir='datasets',
+        val_set = get_eyepacs_dataset(root_dir='datasets',
                                       dataset_name='reduced_eyepacs_resized_cropped',
-                                      split='val', transform=transform_test)
+                                      split='val', transform=transform_val)
 
-    if args.local_rank == 0:
-        torch.distributed.barrier()
-
-    train_sampler = RandomSampler(trainset) if args.local_rank == -1 else DistributedSampler(trainset)
-    test_sampler = SequentialSampler(testset)
-    train_loader = DataLoader(trainset,
+    train_sampler = RandomSampler(train_set)
+    val_sampler = SequentialSampler(val_set)
+    train_loader = DataLoader(train_set,
                               sampler=train_sampler,
                               batch_size=args.train_batch_size,
                               num_workers=args.num_workers,
                               pin_memory=True)
-    test_loader = DataLoader(testset,
-                             sampler=test_sampler,
+    val_loader = DataLoader(val_set,
+                             sampler=val_sampler,
                              batch_size=args.eval_batch_size,
                              num_workers=args.num_workers,
-                             pin_memory=True) if testset is not None else None
+                             pin_memory=True) if val_set is not None else None
 
-    return train_loader, test_loader
+    return train_loader, val_loader
 
 
 def get_loader_inference(args):

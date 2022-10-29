@@ -50,8 +50,6 @@ def main():
                         help="Step of training to perform learning rate warmup for.")
     parser.add_argument("--max_grad_norm", default=1.0, type=float,
                         help="Max gradient norm.")
-    parser.add_argument("--local_rank", type=int, default=-1,
-                        help="local_rank for distributed training on gpus")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
     parser.add_argument('--batch_split', type=int, default=16,
