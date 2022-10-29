@@ -45,7 +45,6 @@ class EyePacsDataset(Dataset):
             self.filename_array[idx])
         img = Image.open(img_filename).convert('RGB')
         img = self.transform(img)
-
         return img, y, self.env_dict[eye_info]
 
 
