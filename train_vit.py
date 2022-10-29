@@ -1,25 +1,20 @@
 
+import logging
 import os
-import random
+
 import numpy as np
-
-from datetime import timedelta
-
+import timm
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.distributed as dist
-
-from tqdm import tqdm
+from apex.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
-from utils.scheduler import WarmupCosineSchedule
+from tqdm import tqdm
+
+from utils.comm_utils import set_seed, AverageMeter, accuracy_func
 from utils.data_utils import get_loader_train
 from utils.dist_util import get_world_size
-import timm
-from apex.parallel import DistributedDataParallel as DDP
-from utils.comm_utils import set_seed, AverageMeter, accuracy_func
-import math
-import logging
+from utils.scheduler import WarmupCosineSchedule
+
 logger = logging.getLogger(__name__)
 
 model_dict = {
@@ -31,7 +26,7 @@ model_dict = {
 def save_model(args, model):
     model_to_save = model.module if hasattr(model, 'module') else model
     model_checkpoint_dir = os.path.join(args.output_dir, args.name, args.dataset, args.model_arch)
-    checkpoint_path = os.path.join(model_checkpoint_dir,args.model_type + ".bin")
+    checkpoint_path = os.path.join(model_checkpoint_dir, args.model_type + ".bin")
     if not os.path.exists(checkpoint_path):
         os.makedirs(model_checkpoint_dir, exist_ok=True)
     torch.save(model_to_save.state_dict(), checkpoint_path)
@@ -39,7 +34,7 @@ def save_model(args, model):
 
 
 def setup(args):
-    num_classes = 2
+    num_classes = args.num_classes
     model_name = model_dict[args.model_type]
     model = timm.create_model(
         model_name,
@@ -157,7 +152,7 @@ def train_model(args):
             batch = tuple(t.to(args.device) for t in batch)
             x, y, _ = batch
             logits = model(x)
-            loss = cri(logits.view(-1, 2), y.view(-1))
+            loss = cri(logits.view(-1, args.num_classes), y.view(-1))
             if args.batch_split > 1:
                 loss = loss / args.batch_split
         

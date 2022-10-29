@@ -58,9 +58,11 @@ def main():
                         help="Number of updates steps to accumulate before performing a backward/update pass.")
     parser.add_argument('--num_workers', type=int, default=2,
                         help="Number of workers to use for the DataLoader.")
+    parser.add_argument('--num_classes', type=int, default=2,
+                        help="Number of classes for the classification task.")
     parser.add_argument('--remove_crop_resize', action='store_true',
                         help="Whether to remove the random crops and resizing of the input images.")
-   
+
     args = parser.parse_args()
 
     # Setup CUDA, GPU & distributed training
