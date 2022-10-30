@@ -70,7 +70,7 @@ def train_model(args):
     train_loader, valid_loader = get_loader_train(args)
 
     logger.info(f"Loading model from {args.model_type}.npz")
-    model = models.KNOWN_MODELS[args.model_type](head_size=2, zero_head=True)
+    model = models.KNOWN_MODELS[args.model_type](head_size=args.num_classes, zero_head=True)
     model.load_from(np.load("bit_pretrained_models/" + args.model_type + ".npz"))
 
     logger.info("Moving model onto all GPUs")
