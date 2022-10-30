@@ -1,17 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
-import logging
 import argparse
-import numpy as np
-from datetime import timedelta
+import logging
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.distributed as dist
 
-from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
 from utils.comm_utils import set_seed
 
 logger = logging.getLogger(__name__)
@@ -63,24 +56,16 @@ def main():
 
     args = parser.parse_args()
 
-    # Setup CUDA, GPU & distributed training
-    if args.local_rank == -1:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        args.n_gpu = torch.cuda.device_count()
-    else:  # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
-        torch.cuda.set_device(args.local_rank)
-        device = torch.device("cuda", args.local_rank)
-        torch.distributed.init_process_group(backend='nccl',
-                                             timeout=timedelta(minutes=60))
-        args.n_gpu = 1
+    # Setup device (CUDA GPU or CPU)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    args.n_gpu = torch.cuda.device_count()
     args.device = device
 
     # Setup logging
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                        datefmt='%m/%d/%Y %H:%M:%S',
-                        level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
-    logger.warning("Process rank: %s, device: %s, n_gpu: %s, distributed training: %s" %
-                   (args.local_rank, args.device, args.n_gpu, bool(args.local_rank != -1)))
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        level=logging.INFO)
+    logger.warning(f'Device: {args.device}, n_gpu: {args.n_gpu}')
 
     # Set seed
     set_seed(args)

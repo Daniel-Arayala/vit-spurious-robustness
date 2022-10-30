@@ -1,25 +1,17 @@
-import logging
 import argparse
-import numpy as np
-from datetime import timedelta
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-import torchvision
-import torch.nn.parallel
-from evaluation_utils.evaluate_acc import calculate_acc
 import logging
+
+from evaluation_utils.evaluate_acc import calculate_acc
 
 logger = logging.getLogger(__name__)
+
 
 def main():
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument("--name", required=True,
                         help="help identify checkpoint")
-    parser.add_argument("--dataset", choices=["waterbirds","cmnist","celebA"], default="waterbirds",
+    parser.add_argument("--dataset", choices=["waterbirds", "cmnist", "celebA", "eyepacs"], default="waterbirds",
                         help="Which downstream task.")
     parser.add_argument("--model_arch", choices=["ViT", "BiT"],
                         default="ViT",
@@ -34,16 +26,19 @@ def main():
                         help="Resolution size")
     parser.add_argument("--batch_size", default=64, type=int,
                         help="Total batch size for eval.")
+    parser.add_argument('--num_workers', type=int, default=2,
+                        help="Number of workers to use for the DataLoader.")
+    parser.add_argument('--num_classes', type=int, default=2,
+                        help="Number of classes for the classification task.")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
-    parser.add_argument("--local_rank", type=int, default=-1,
-                        help="local_rank for distributed training on gpus")
-    
+
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                        datefmt='%m/%d/%Y %H:%M:%S',
-                        level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        level=logging.INFO)
     calculate_acc(args)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

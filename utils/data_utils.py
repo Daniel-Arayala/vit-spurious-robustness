@@ -115,6 +115,8 @@ def get_loader_train(args):
         val_set = get_eyepacs_dataset(root_dir='datasets',
                                       dataset_name='reduced_eyepacs_resized_cropped',
                                       split='val', transform=transform_val)
+    else:
+        raise NotImplemented(f'Invalid dataset option: {args.dataset}')
 
     train_sampler = RandomSampler(train_set)
     val_sampler = SequentialSampler(val_set)
@@ -124,10 +126,10 @@ def get_loader_train(args):
                               num_workers=args.num_workers,
                               pin_memory=True)
     val_loader = DataLoader(val_set,
-                             sampler=val_sampler,
-                             batch_size=args.eval_batch_size,
-                             num_workers=args.num_workers,
-                             pin_memory=True) if val_set is not None else None
+                            sampler=val_sampler,
+                            batch_size=args.eval_batch_size,
+                            num_workers=args.num_workers,
+                            pin_memory=True) if val_set is not None else None
 
     return train_loader, val_loader
 
@@ -149,19 +151,18 @@ def get_loader_inference(args):
         ])
 
     if args.dataset == "celebA":
-        trainset = get_celebA_dataset(split="train", transform=transform_test,
+        train_set = get_celebA_dataset(split="train", transform=transform_test,
+                                       root_dir='datasets')
+        test_set = get_celebA_dataset(split="test", transform=transform_test,
                                       root_dir='datasets')
-        testset = get_celebA_dataset(split="test", transform=transform_test,
-                                     root_dir='datasets')
+    elif args.dataset == "waterbirds":
+        train_set = get_waterbird_dataset(data_label_correlation=0.95,
+                                          split="train", transform=transform_test, root_dir='datasets')
 
-    if args.dataset == "waterbirds":
-        trainset = get_waterbird_dataset(data_label_correlation=0.95,
-                                         split="train", transform=transform_test, root_dir='datasets')
+        test_set = get_waterbird_dataset(data_label_correlation=0.95,
+                                         split="test", transform=transform_test, root_dir='datasets')
 
-        testset = get_waterbird_dataset(data_label_correlation=0.95,
-                                        split="test", transform=transform_test, root_dir='datasets')
-
-    if args.dataset == "cmnist":
+    elif args.dataset == "cmnist":
         trainset_1 = get_biased_mnist_dataset(root='./datasets/MNIST',
                                               data_label_correlation=0.45,
                                               n_confusing_labels=1,
@@ -170,17 +171,29 @@ def get_loader_inference(args):
                                               data_label_correlation=0.45,
                                               n_confusing_labels=1,
                                               train=True, partial=True, cmap="2", transform=transform_test)
-        testset = get_biased_mnist_dataset(root='./datasets/MNIST',
-                                           data_label_correlation=0.45,
-                                           n_confusing_labels=1,
-                                           train=False, partial=True, cmap="1", transform=transform_test)
-        trainset = trainset_1 + trainset_2
+        test_set = get_biased_mnist_dataset(root='./datasets/MNIST',
+                                            data_label_correlation=0.45,
+                                            n_confusing_labels=1,
+                                            train=False, partial=True, cmap="1", transform=transform_test)
+        train_set = trainset_1 + trainset_2
 
-    train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size,
-                                               shuffle=True, num_workers=2,
-                                               pin_memory=True) if testset is not None else None
-    test_loader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
-                                              shuffle=True, num_workers=2,
-                                              pin_memory=True) if testset is not None else None
+    elif args.dataset == "eyepacs":
+        train_set = get_eyepacs_dataset(root_dir='datasets',
+                                        dataset_name='reduced_eyepacs_resized_cropped',
+                                        split='train', transform=transform_test)
+
+        test_set = get_eyepacs_dataset(root_dir='datasets',
+                                       dataset_name='reduced_eyepacs_resized_cropped',
+                                       split='test', transform=transform_test)
+
+    else:
+        raise NotImplemented(f'Invalid dataset option: {args.dataset}')
+
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size,
+                                               shuffle=True, num_workers=args.num_workers,
+                                               pin_memory=True) if test_set is not None else None
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size,
+                                              shuffle=True, num_workers=args.num_workers,
+                                              pin_memory=True) if test_set is not None else None
 
     return train_loader, test_loader
