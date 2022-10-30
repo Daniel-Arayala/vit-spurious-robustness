@@ -62,7 +62,7 @@ def main():
     args.device = device
 
     # Setup logging
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+    logging.basicConfig(format='[%(asctime)s] - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         level=logging.INFO)
     logger.warning(f'Device: {args.device}, n_gpu: {args.n_gpu}')

@@ -111,7 +111,7 @@ def calculate_acc(args):
         model.load_state_dict(torch.load(args.checkpoint_dir + ".bin"))
         model.eval()
     elif args.model_arch == "BiT":
-        model = bits.KNOWN_MODELS[args.model_type](head_size=2, zero_head=False)
+        model = bits.KNOWN_MODELS[args.model_type](head_size=args.num_classes, zero_head=False)
         model = torch.nn.DataParallel(model)
         checkpoint = torch.load(args.checkpoint_dir + ".pth.tar", map_location="cpu")
         model.load_state_dict(checkpoint["model"])

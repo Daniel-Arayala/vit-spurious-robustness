@@ -35,7 +35,7 @@ class WaterbirdDataset(Dataset):
                 f'{self.dataset_dir} does not exist yet. Please generate the dataset first.') 
         self.metadata_df = pd.read_csv(
             os.path.join(self.dataset_dir, 'metadata.csv'))
-        self.metadata_df = self.metadata_df[self.metadata_df['split']==self.split_dict[self.split]]
+        self.metadata_df = self.metadata_df[self.metadata_df['split'] == self.split_dict[self.split]]
         self.y_array = self.metadata_df['y'].values
         self.place_array = self.metadata_df['place'].values
         self.filename_array = self.metadata_df['img_filename'].values

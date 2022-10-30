@@ -14,6 +14,7 @@ import logging
 import time
 from evaluation_utils import cal as c
 import argparse
+
 logger = logging.getLogger(__name__)
 torch.manual_seed(1)
 np.random.seed(1)
@@ -24,7 +25,7 @@ def main():
     # Required parameters
     parser.add_argument("--name", required=True,
                         help="help identify checkpoint")
-    parser.add_argument("--id_dataset", choices=["waterbirds","cmnist","celebA"], default="waterbirds",
+    parser.add_argument("--id_dataset", choices=["waterbirds", "cmnist", "celebA"], default="waterbirds",
                         help="Which downstream task.")
     parser.add_argument("--model_arch", choices=["ViT", "BiT"],
                         default="ViT",
@@ -43,14 +44,13 @@ def main():
                         help="random seed for initialization")
     parser.add_argument("--local_rank", type=int, default=-1,
                         help="local_rank for distributed training on gpus")
-    
-    
+
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
     c.test(args)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     main()
-    
