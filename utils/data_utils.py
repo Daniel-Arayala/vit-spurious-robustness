@@ -24,7 +24,8 @@ known_dataset_sizes = {
 
     'cmnist': (28, 28),
     'waterbirds': (224, 224),
-    'celebA': (224, 224)
+    'celebA': (224, 224),
+    'eyepacs': (1024, 1024)
 }
 
 
@@ -109,8 +110,8 @@ def get_loader_train(args):
 
     elif args.dataset == "eyepacs":
         train_set = get_eyepacs_dataset(root_dir='datasets',
-                                       dataset_name='reduced_eyepacs_resized_cropped',
-                                       split='train', transform=transform_train)
+                                        dataset_name='reduced_eyepacs_resized_cropped',
+                                        split='train', transform=transform_train)
 
         val_set = get_eyepacs_dataset(root_dir='datasets',
                                       dataset_name='reduced_eyepacs_resized_cropped',
