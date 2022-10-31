@@ -1,0 +1,25 @@
+name: vit-robust
+channels:
+- conda-forge
+- defaults
+- pytorch
+- nvidia
+dependencies:
+- python=3.9.13
+- pillow==9.2.0
+- scipy==1.9.1
+- numpy==1.23.3
+- pandas==1.5.0
+- scikit-learn == 1.1.2
+- jupyterlab==3.4.6
+- tqdm==4.64.1
+- pip=21.3.1
+- pip:
+  - timm==0.6.11
+  - clearml==1.7.2
+  - pyDeprecate==0.3.2
+  # The three packages below will be installed using the external link
+  - -f https://download.pytorch.org/whl/cu102/torch_stable.html
+  - torch==1.10.1+cu102
+  - torchvision==0.11.2+cu102
+  - torchaudio==0.10.1
