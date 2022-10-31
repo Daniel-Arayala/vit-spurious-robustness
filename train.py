@@ -6,6 +6,7 @@ import logging
 import torch
 
 from utils.comm_utils import set_seed
+from clearml import Task, TaskTypes
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +54,19 @@ def main():
                         help="Number of classes for the classification task.")
     parser.add_argument('--remove_crop_resize', action='store_true',
                         help="Whether to remove the random crops and resizing of the input images.")
+    parser.add_argument('--use_clearml', action='store_true',
+                        help="Whether to use the ClearML tool as an experiment tracker")
 
     args = parser.parse_args()
+
+    if args.use_clearml:
+        # Setting up ClearML tracking
+        task = Task.init(
+            project_name='ViTs Robustness to Spurious Correlation',
+            task_name=f'Training {args.model_arch} on {args.dataset}',
+            task_type=TaskTypes.training,
+            tags=[args.model_arch, args.model_type, args.dataset],
+        )
 
     # Setup device (CUDA GPU or CPU)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
