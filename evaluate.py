@@ -2,6 +2,7 @@ import argparse
 import logging
 
 from evaluation_utils.evaluate_acc import calculate_acc
+from clearml import Task, TaskTypes
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +33,23 @@ def main():
                         help="Number of classes for the classification task.")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
+    parser.add_argument('--use_clearml', action='store_true',
+                        help="Whether to use the ClearML tool as an experiment tracker")
 
     args = parser.parse_args()
     logging.basicConfig(format='[%(asctime)s] - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         level=logging.INFO)
+
+    if args.use_clearml:
+        # Setting up ClearML tracking
+        task = Task.init(
+            project_name='ViTs Robustness to Spurious Correlation',
+            task_name=f'Evaluating {args.model_arch} on {args.dataset}',
+            task_type=TaskTypes.testing,
+            tags=[args.model_arch, args.model_type, args.dataset]
+        )
+
     calculate_acc(args)
 
 

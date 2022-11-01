@@ -43,7 +43,7 @@ class Result:
             self.acc[env_unique].append(correct)
 
     def output_result(self):
-        print("The number of examples according to environment :")
+        print("The number of samples according to environment :")
         for key, val in self.counter_env.items():
             print(f"{key} : {val}", end='  ')
 
@@ -107,7 +107,6 @@ def calculate_acc(args):
             num_classes=args.num_classes,
             img_size=args.img_size
         )
-
         model.load_state_dict(torch.load(args.checkpoint_dir + ".bin"))
         model.eval()
     elif args.model_arch == "BiT":
