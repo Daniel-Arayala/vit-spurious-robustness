@@ -6,18 +6,35 @@ channels:
 - nvidia
 dependencies:
 - python=3.9.13
-- pillow==9.2.0
-- scipy==1.9.1
-- numpy==1.23.3
-- pandas==1.5.0
-- scikit-learn == 1.1.2
-- jupyterlab==3.4.6
-- tqdm==4.64.1
 - pip=21.3.1
 - pip:
+  - pillow==9.2.0
+  - pudb==2022.1.2
+  - flake8==5.0.4
+  - stevedore==4.0.0
+  - pytorch-lightning==1.7.5
+  - pudb==2022.1.2
+  - cmd2==2.4.2
+  - cliff==4.0.0
+  - pre-commit==2.20.0
+  - black==22.8.0
+  - docker==5.0.3
+  - scipy==1.9.1
+  - numpy==1.23.3
+  - pandas==1.5.0
+  - pytest==7.1.3
+  - pylint==2.15.2
+  - scikit-learn==1.1.2
+  - ipywidgets==8.0.2
+  - jupyterlab==3.4.6
+  - tqdm==4.64.1
+  - setuptools==59.5.0
+  - protobuf==3.19.4
+  - tensorboard==2.10.0
   - timm==0.6.11
+  - hydra-core==1.2.0
+  - virtualenv==20.16.4
   - clearml==1.7.2
-  - pyDeprecate==0.3.2
   # The three packages below will be installed using the external link
   - -f https://download.pytorch.org/whl/cu102/torch_stable.html
   - torch==1.10.1+cu102
