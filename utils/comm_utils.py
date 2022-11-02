@@ -32,5 +32,3 @@ class AverageMeter(object):
 
 def accuracy_func(preds, labels):
     return (preds == labels).mean()
-
-    

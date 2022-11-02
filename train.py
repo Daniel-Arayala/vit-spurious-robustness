@@ -62,10 +62,10 @@ def main():
     if args.use_clearml:
         # Setting up ClearML tracking
         task = Task.init(
-            project_name='ViTs Robustness to Spurious Correlation',
+            project_name=f'ViTs Robustness to Spurious Correlation/{args.name}/{args.model_arch}',
             task_name=f'Training {args.model_arch} on {args.dataset}',
             task_type=TaskTypes.training,
-            tags=[args.model_arch, args.model_type, args.dataset],
+            tags=[args.name, args.model_arch, args.model_type, args.dataset],
         )
 
     # Setup device (CUDA GPU or CPU)
