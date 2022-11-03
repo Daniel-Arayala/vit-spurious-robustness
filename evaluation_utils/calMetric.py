@@ -103,7 +103,7 @@ def auroc(id_score, ood_score):
     pred = np.concatenate((X1,Y1))
     label = np.concatenate((np.ones((len(X1))),np.zeros((len(Y1)))))
     auc = metrics.roc_auc_score(label, pred)
-    return  auc
+    return auc
  
 
 def print_measures(auroc, aupr, fpr,recall_level=recall_level_default):

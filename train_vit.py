@@ -10,6 +10,7 @@ from tqdm import tqdm
 from utils.comm_utils import set_seed, AverageMeter, accuracy_func
 from utils.data_utils import get_loader_train
 from utils.scheduler import WarmupCosineSchedule
+from evaluation_utils.performance_metrics import get_classification_metrics, accuracy_score, log_evaluation
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ def valid(args, model, writer, test_loader, global_step):
     logger.info("  Batch size = %d", args.eval_batch_size)
 
     model.eval()
-    all_preds, all_label = [], []
+    all_preds, all_labels = [], []
     epoch_iterator = tqdm(test_loader,
                           desc="Validating... (loss=X.X)",
                           bar_format="{l_bar}{r_bar}",
@@ -74,23 +75,26 @@ def valid(args, model, writer, test_loader, global_step):
             logits = model(x)
             eval_loss = loss_fct(logits, y)
             eval_losses.update(eval_loss.item())
-
             preds = torch.argmax(logits, dim=-1)
 
         if len(all_preds) == 0:
             all_preds.append(preds.detach().cpu().numpy())
-            all_label.append(y.detach().cpu().numpy())
+            all_labels.append(y.detach().cpu().numpy())
         else:
             all_preds[0] = np.append(
                 all_preds[0], preds.detach().cpu().numpy(), axis=0
             )
-            all_label[0] = np.append(
-                all_label[0], y.detach().cpu().numpy(), axis=0
+            all_labels[0] = np.append(
+                all_labels[0], y.detach().cpu().numpy(), axis=0
             )
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
 
-    all_preds, all_label = all_preds[0], all_label[0]
-    accuracy = accuracy_func(all_preds, all_label)
+    all_preds, all_labels = all_preds[0], all_labels[0]
+    val_metrics = get_classification_metrics(all_preds, all_labels)
+    log_evaluation(global_step, val_metrics, writer, 'val')
+    writer.add_scalar("val/loss", scalar_value=eval_losses.avg, global_step=global_step)
+    writer.add_scalar("loss/val", scalar_value=eval_losses.avg, global_step=global_step)
+    accuracy = accuracy_score(all_preds, all_labels)
 
     logger.info("\n")
     logger.info("Validation Results")
@@ -98,7 +102,7 @@ def valid(args, model, writer, test_loader, global_step):
     logger.info("Valid Loss: %2.5f" % eval_losses.avg)
     logger.info("Valid Accuracy: %2.5f" % accuracy)
 
-    writer.add_scalar("test/accuracy", scalar_value=accuracy, global_step=global_step)
+    writer.add_scalar("accuracy/val", scalar_value=accuracy, global_step=global_step)
     return accuracy
 
 
@@ -131,6 +135,7 @@ def train_model(args):
     set_seed(args)  
     losses = AverageMeter()
     global_step, best_acc = 0, 0
+
     while True:
         model.train()
         epoch_iterator = tqdm(train_loader,
@@ -144,7 +149,7 @@ def train_model(args):
             loss = cri(logits.view(-1, args.num_classes), y.view(-1))
             if args.batch_split > 1:
                 loss = loss / args.batch_split
-        
+
             loss.backward()
 
             if (step + 1) % args.batch_split == 0:
@@ -158,9 +163,17 @@ def train_model(args):
                 epoch_iterator.set_description(
                     "Training (%d / %d Steps) (loss=%2.5f)" % (global_step, t_total, losses.val)
                 )
-
+                # Calculates train accuracy through iterations (every batch_split epochs)
+                preds = torch.argmax(logits, dim=-1)
+                preds = preds.cpu().numpy()
+                labels = y.cpu().numpy()
+                # train_acc = accuracy_score(labels, preds)
+                train_metrics = get_classification_metrics(preds, labels)
+                log_evaluation(global_step, train_metrics, writer, 'train')
+                # writer.add_scalar("accuracy/train", scalar_value=train_acc, global_step=global_step)
                 writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
-                writer.add_scalar("train/lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
+                writer.add_scalar("loss/train", scalar_value=losses.val, global_step=global_step)
+                writer.add_scalar("lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
 
                 if global_step % args.eval_every == 0:
                     accuracy = valid(args, model, writer, val_loader, global_step)
