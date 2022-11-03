@@ -92,7 +92,6 @@ def valid(args, model, writer, test_loader, global_step):
     all_preds, all_labels = all_preds[0], all_labels[0]
     val_metrics = get_classification_metrics(all_preds, all_labels)
     log_evaluation(global_step, val_metrics, writer, 'val')
-    writer.add_scalar("val/loss", scalar_value=eval_losses.avg, global_step=global_step)
     writer.add_scalar("loss/val", scalar_value=eval_losses.avg, global_step=global_step)
     accuracy = accuracy_score(all_preds, all_labels)
 
@@ -142,18 +141,28 @@ def train_model(args):
                               desc="Training (X / X Steps) (loss=X.X)",
                               bar_format="{l_bar}{r_bar}",
                               dynamic_ncols=True)
+        # Accumulates the predictions and labels for all batch splits adding to one full batch size
+        preds_effective_batch, labels_effective_batch = [], []
+        batch_loss_accum = 0  # Accumulates the average loss per split inside a batch
         for step, batch in enumerate(epoch_iterator):
             batch = tuple(t.to(args.device) for t in batch)
             x, y, _ = batch
             logits = model(x)
             loss = cri(logits.view(-1, args.num_classes), y.view(-1))
-            if args.batch_split > 1:
-                loss = loss / args.batch_split
-
+            loss = loss / args.batch_split
+            batch_loss_accum += loss.item()
             loss.backward()
+            # Batch split metrics
+            preds = torch.argmax(logits, dim=-1)
+            preds = preds.cpu().numpy()
+            labels = y.cpu().numpy()
+            # Accumulating true and predicted for the whole batch size
+            preds_effective_batch.extend(preds)
+            labels_effective_batch.extend(labels)
 
-            if (step + 1) % args.batch_split == 0:
-                losses.update(loss.item()*args.batch_split)
+            if ((step + 1) % args.batch_split == 0) or (step + 1 == len(epoch_iterator)):
+                losses.update(batch_loss_accum)
+                batch_loss_accum = 0
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                 scheduler.step()
                 optimizer.step()
@@ -163,17 +172,15 @@ def train_model(args):
                 epoch_iterator.set_description(
                     "Training (%d / %d Steps) (loss=%2.5f)" % (global_step, t_total, losses.val)
                 )
+
                 # Calculates train accuracy through iterations (every batch_split epochs)
-                preds = torch.argmax(logits, dim=-1)
-                preds = preds.cpu().numpy()
-                labels = y.cpu().numpy()
-                # train_acc = accuracy_score(labels, preds)
-                train_metrics = get_classification_metrics(preds, labels)
+                train_metrics = get_classification_metrics(preds_effective_batch, labels_effective_batch)
                 log_evaluation(global_step, train_metrics, writer, 'train')
                 # writer.add_scalar("accuracy/train", scalar_value=train_acc, global_step=global_step)
-                writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
                 writer.add_scalar("loss/train", scalar_value=losses.val, global_step=global_step)
                 writer.add_scalar("lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
+                # Setting accumulators to empty to receive the next batch
+                preds_effective_batch, labels_effective_batch = [], []
 
                 if global_step % args.eval_every == 0:
                     accuracy = valid(args, model, writer, val_loader, global_step)
