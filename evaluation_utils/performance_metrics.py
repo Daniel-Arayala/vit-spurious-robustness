@@ -1,20 +1,15 @@
+import logging
 import os
-import random
 
 import matplotlib.pyplot as plt
-import numpy as np
 import seaborn as sns
 import torch
-import logging
 from sklearn.metrics import (
-    accuracy_score,
-    cohen_kappa_score,
-    precision_score,
-    recall_score,
     confusion_matrix,
-    f1_score,
-    roc_auc_score,
+    classification_report,
 )
+
+from datasets.constants import CLASS_TYPE_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -27,90 +22,66 @@ def get_binary_results(multiclass_results):
     return [0 if x <= 1 else 1 for x in multiclass_results]
 
 
-def get_classification_metrics(y_pred, y_true):
+def convert_inputs_to_tensor(y_true, y_pred):
+    if isinstance(y_true, torch.Tensor):
+        y_true = tensor_to_list(y_true)
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = tensor_to_list(y_pred)
+    return y_true, y_pred
+
+
+def get_metrics(y_true, y_pred, class_type='bin', include_cm=False):
     # Convert tensor to list
-    y_pred = tensor_to_list(y_pred)
-    y_true = tensor_to_list(y_true)
+    y_true, y_pred = convert_inputs_to_tensor(y_true, y_pred)
 
-    # Get binary results
-    y_pred_bin = get_binary_results(y_pred)
-    y_true_bin = get_binary_results(y_true)
+    # Binarization
+    if class_type == 'bin':
+        y_true = get_binary_results(y_true)
+        y_pred = get_binary_results(y_pred)
 
-    metrics = {}
-    # Multiclass
-    metrics["mult"] = {
-        "accuracy": accuracy_score(y_true, y_pred),
-        "precision": precision_score(y_pred, y_true, average="macro", zero_division=0),
-        "recall": recall_score(y_pred, y_true, average="macro", zero_division=0),
-        "f1_score": f1_score(y_pred, y_true, average="macro", zero_division=0),
-        "kappa": cohen_kappa_score(y_pred, y_true, weights="quadratic"),
-    }
+    metrics = classification_report(y_true, y_pred, output_dict=True)
 
-    # Binary
-    tn, fp, fn, tp = confusion_matrix(y_pred_bin, y_true_bin).ravel()
-    metrics["bin"] = {
-        "accuracy": accuracy_score(y_true_bin, y_pred_bin),
-        "precision": precision_score(y_pred_bin, y_true_bin, zero_division=0),
-        "recall": recall_score(y_pred_bin, y_true_bin, zero_division=0),
-        "f1_score": f1_score(y_pred_bin, y_true_bin, zero_division=0),
-        "roc_auc_score": roc_auc_score(y_true_bin, y_pred_bin),
-        "sensitivity": (tp / (tp + fp)),
-        "specificity": (tn / (tn + fp)),
-    }
-
+    if include_cm:
+        return metrics, confusion_matrix(y_true, y_pred)
     return metrics
 
 
-def get_metrics_binary(y_pred, y_true):
-    # Convert tensor to list
-    y_pred = tensor_to_list(y_pred)
-    y_true = tensor_to_list(y_true)
+def log_evaluation(epoch, statistics, writer, partition, metric_scope='global'):
+    """metric_scope:
+        'class': logs precision, recall, and f1-score for each class separately
+        'global': logs precision, recall, and f1-score across all classes (macro avg, weighted avg, and micro avg)
+        'all': logs both class-specific metrics and global metrics
+    """
+    statistics_keys = list(statistics.keys())
+    has_classification_type = ('bin' in statistics_keys) or ('mult' in statistics_keys)
+    if has_classification_type:
+        for classification_type, metric_info in statistics.items():
+            cl_type = CLASS_TYPE_MAP[classification_type]
+            for metric_name, metric_value in metric_info.items():
+                # Drops the support field from the classification report
+                if isinstance(metric_value, dict):
+                    _ = metric_value.pop('support', None)
+                if metric_name.isnumeric() and metric_scope in ('class', 'all'):
+                    graph_title = f'{partition.title()} - {cl_type} - Class {metric_name}'
+                    writer.add_scalars(graph_title, metric_value, epoch)
+                elif metric_name == 'accuracy' and metric_scope in ('global', 'all'):
+                    writer.add_scalar(f'{metric_name.title()}/{partition}', metric_value, epoch)
+                # macro avg, weighted avg, and micro avg
+                elif (not metric_name.isnumeric()) and (metric_scope in ('global', 'all')):
+                    # Grouping by metric and partition
+                    for nested_metric_name, nested_metric_value in metric_value.items():
+                        graph_title_part_group = \
+                            f'{partition.title()} - {cl_type} - {metric_name.title()}/{nested_metric_name}'
+                        writer.add_scalar(graph_title_part_group, nested_metric_value, epoch)
+                        graph_title_metric_group = \
+                            f'{cl_type} - {nested_metric_name.title()} ({metric_name.title()})/{partition}'
+                        writer.add_scalar(graph_title_metric_group, nested_metric_value, epoch)
 
-    metrics = {}
 
-    # Binary
-    # print(confusion_matrix(y_pred, y_true).ravel())
-    tn, fp, fn, tp = confusion_matrix(y_pred, y_true).ravel()
-    metrics = {
-        "accuracy": accuracy_score(y_true, y_pred),
-        "precision": precision_score(y_pred, y_true, zero_division=0),
-        "recall": recall_score(y_pred, y_true, zero_division=0),
-        "f1_score": f1_score(y_pred, y_true, zero_division=0),
-        # "roc_auc_score": roc_auc_score(y_true, y_pred),
-        "sensitivity": (tp / (tp + fp)),
-        "specificity": (tn / (tn + fp)),
-    }
-
-    try:
-        metrics["roc_auc_score"] = roc_auc_score(y_true, y_pred)
-    except:
-        metrics["roc_auc_score"] = 0
-
-    return metrics
-
-
-def log_evaluation(epoch, statistics, writer, partition):
-    if 'bin' in statistics.keys():
-        # Logging all metrics for specific partition
-        # Binary Classification Statistics
-        writer.add_scalars(f'bin_{partition}', statistics["bin"], epoch)
-        # Multiclass Classification Statistics
-        writer.add_scalars(f'mult_{partition}', statistics["mult"], epoch)
-
-        # Logging specific metric for all partitions
-        for metric in statistics['mult'].keys():
-            writer.add_scalar(f'{metric}/{partition}', statistics['mult'][metric], epoch)
-        #logger.debug(f"{partition} epoch {epoch}. Loss {statistics['mult']['loss']} Kappa {statistics['mult']['kappa']}")
-    else:
-        for metric in statistics.keys():
-            writer.add_scalar(f'{metric}/{partition}', statistics[metric], epoch)
-            writer.add_scalar(f'{partition}/{metric}', statistics[metric], epoch)
-
-        # logger.debug(
-        #     '{} epoch {}. Loss {} Kappa {}'.format(
-        #         partition, epoch, statistics['loss'], statistics['kappa']
-        #     )
-        # )
+def get_classification_metrics(y_true, y_pred, include_cm=False, class_types=('bin', 'mult')):
+    return {
+        class_type: get_metrics(y_true, y_pred, class_type=class_type, include_cm=include_cm)
+        for class_type in class_types}
 
 
 def log_evaluation_binary(epoch, statistics, writer, prefix):

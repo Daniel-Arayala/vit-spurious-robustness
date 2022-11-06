@@ -10,7 +10,7 @@ from tqdm import tqdm
 from utils.comm_utils import set_seed, AverageMeter, accuracy_func
 from utils.data_utils import get_loader_train
 from utils.scheduler import WarmupCosineSchedule
-from evaluation_utils.performance_metrics import get_classification_metrics, accuracy_score, log_evaluation
+from evaluation_utils.performance_metrics import get_classification_metrics, log_evaluation
 
 logger = logging.getLogger(__name__)
 
@@ -90,10 +90,13 @@ def valid(args, model, writer, test_loader, global_step):
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
 
     all_preds, all_labels = all_preds[0], all_labels[0]
-    val_metrics = get_classification_metrics(all_preds, all_labels)
+    val_metrics = get_classification_metrics(all_labels, all_preds)
     log_evaluation(global_step, val_metrics, writer, 'val')
     writer.add_scalar("loss/val", scalar_value=eval_losses.avg, global_step=global_step)
-    accuracy = accuracy_score(all_preds, all_labels)
+    try:
+        accuracy = val_metrics['mult']['accuracy']
+    except KeyError:
+        accuracy = val_metrics['bin']['accuracy']
 
     logger.info("\n")
     logger.info("Validation Results")
@@ -101,7 +104,7 @@ def valid(args, model, writer, test_loader, global_step):
     logger.info("Valid Loss: %2.5f" % eval_losses.avg)
     logger.info("Valid Accuracy: %2.5f" % accuracy)
 
-    writer.add_scalar("accuracy/val", scalar_value=accuracy, global_step=global_step)
+    # writer.add_scalar("accuracy/val", scalar_value=accuracy, global_step=global_step)
     return accuracy
 
 
