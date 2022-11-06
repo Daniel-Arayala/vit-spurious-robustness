@@ -77,6 +77,35 @@ def log_evaluation(epoch, statistics, writer, partition, metric_scope='global'):
                             f'{cl_type} - {nested_metric_name.title()} ({metric_name.title()})/{partition}'
                         writer.add_scalar(graph_title_metric_group, nested_metric_value, epoch)
 
+def log_metrics_to_clearml(metrics, partition, clearml_logger):
+    # Metrics for the entire train, validation, or test partitions
+    part_metrics_bin = metrics['partition']['bin']
+    part_metrics_mult = metrics['partition']['mult']
+    # Binary
+    if isinstance(part_metrics_bin, tuple):
+        part_metrics_bin, cm_bin = part_metrics_bin
+        clearml_logger.report_confusion_matrix(
+            title=f'{partition.title()} Metrics (Binary)',
+            matrix=cm_bin,
+            xaxis='Predicted', yaxis='Actual',
+            comment=f'Confusion matrix for the {partition}, considering a'
+                    f'binary classification task')
+    clearml_logger.report_table(
+        title=f'{partition.title()} Metrics (Binary)',
+        table_plot=part_metrics_bin)
+
+    if isinstance(part_metrics_mult, tuple):
+        part_metrics_mult, cm_mult = part_metrics_mult
+        clearml_logger.report_confusion_matrix(
+            title=f'{partition.title()} Metrics (Multiclass)',
+            matrix=cm_mult,
+            xaxis='Predicted', yaxis='Actual',
+            comment=f'Confusion matrix for the {partition}, considering a'
+                    f'multiclass classification task')
+    clearml_logger.report_table(
+        title=f'{partition.title()} Metrics (Multiclass)',
+        table_plot=part_metrics_mult)
+
 
 def get_classification_metrics(y_true, y_pred, include_cm=False, class_types=('bin', 'mult')):
     return {
