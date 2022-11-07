@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-from evaluation_utils.evaluate_acc import calculate_acc
+from evaluation_utils.evaluate_metrics import calculate_inference_metrics
 from clearml import Task, TaskTypes
 
 logger = logging.getLogger(__name__)
@@ -40,17 +40,20 @@ def main():
     logging.basicConfig(format='[%(asctime)s] - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         level=logging.INFO)
-
+    task = None
     if args.use_clearml:
         # Setting up ClearML tracking
         task = Task.init(
-            project_name='ViTs Robustness to Spurious Correlation',
-            task_name=f'Evaluating {args.model_arch} on {args.dataset}',
-            task_type=TaskTypes.testing,
+            project_name=f'ViTs Robustness to Spurious Correlation/{args.name}/{args.model_arch}',
+            task_name=f'Evaluating {args.model_type} on {args.dataset}',
+            task_type=TaskTypes.inference,
+            reuse_last_task_id=False,
             tags=[args.model_arch, args.model_type, args.dataset]
         )
-
-    calculate_acc(args)
+    calculate_inference_metrics(args)
+    logger.info('Evaluation finished!')
+    if args.use_clearml:
+        task.mark_completed()
 
 
 if __name__ == "__main__":
