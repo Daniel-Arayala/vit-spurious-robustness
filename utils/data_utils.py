@@ -135,8 +135,9 @@ def get_loader_train(args):
     return train_loader, val_loader
 
 
-def get_loader_inference(args):
+def get_loader_inference(args, include_val=False):
     mean, std = get_normalize_params(args)
+    val_set = None
     if args.model_arch == "BiT":
         precrop, crop = get_resolution_from_dataset(args.dataset)
         transform_test = transforms.Compose([
@@ -186,6 +187,10 @@ def get_loader_inference(args):
         test_set = get_eyepacs_dataset(root_dir='datasets',
                                        dataset_name='reduced_eyepacs_resized_cropped',
                                        split='test', transform=transform_test)
+        if include_val:
+            val_set = get_eyepacs_dataset(root_dir='datasets',
+                                          dataset_name='reduced_eyepacs_resized_cropped',
+                                          split='val', transform=transform_test)
 
     else:
         raise NotImplemented(f'Invalid dataset option: {args.dataset}')
@@ -196,5 +201,10 @@ def get_loader_inference(args):
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size,
                                               shuffle=True, num_workers=args.num_workers,
                                               pin_memory=True) if test_set is not None else None
-
-    return train_loader, test_loader
+    if include_val:
+        val_loader = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size,
+                                                 shuffle=True, num_workers=args.num_workers,
+                                                 pin_memory=True) if test_set is not None else None
+        return train_loader, val_loader, test_loader
+    else:
+        return train_loader, test_loader

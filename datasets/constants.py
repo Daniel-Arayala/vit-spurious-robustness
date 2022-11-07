@@ -9,8 +9,20 @@ class EyePacsEnv(Enum):
 
 
 EYEPACS_ENV_MAP = {
-    'left_nref': EyePacsEnv.LEFT_NREF,
-    'left_ref': EyePacsEnv.LEFT_REF,
-    'right_nref': EyePacsEnv.RIGHT_NREF,
-    'right_ref': EyePacsEnv.RIGHT_REF
+    'left_nref': EyePacsEnv.LEFT_NREF.value,
+    'left_ref': EyePacsEnv.LEFT_REF.value,
+    'right_nref': EyePacsEnv.RIGHT_NREF.value,
+    'right_ref': EyePacsEnv.RIGHT_REF.value
+}
+
+EYEPACS_ENV_MAP_INV = {
+    EyePacsEnv.LEFT_NREF.value: 'left_nref',
+    EyePacsEnv.LEFT_REF.value: 'left_ref',
+    EyePacsEnv.RIGHT_NREF.value: 'right_nref',
+    EyePacsEnv.RIGHT_REF.value: 'right_ref'
+}
+
+CLASS_TYPE_MAP = {
+    'bin': 'Binary',
+    'mult': 'Multiclass'
 }
