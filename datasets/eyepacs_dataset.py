@@ -5,6 +5,7 @@ import warnings
 import pandas as pd
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
+from .constants import EYEPACS_ENV_MAP
 
 warnings.filterwarnings("ignore")
 
@@ -16,12 +17,7 @@ class EyePacsDataset(Dataset):
         self.split = split
         self.transform = transform
         self.dataset_dir = os.path.join(self.root_dir, self.dataset_name)
-        self.env_dict = {
-            'left_nref': 0,
-            'right_nref': 1,
-            'left_ref': 2,
-            'right_ref': 3
-        }
+        self.env_dict = EYEPACS_ENV_MAP
         # Checks if the dataset folder exists
         if not os.path.exists(self.dataset_dir):
             raise ValueError(
