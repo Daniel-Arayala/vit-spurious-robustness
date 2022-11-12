@@ -104,7 +104,6 @@ def valid(args, model, writer, test_loader, global_step):
     logger.info("Valid Loss: %2.5f" % eval_losses.avg)
     logger.info("Valid Accuracy: %2.5f" % accuracy)
 
-    # writer.add_scalar("accuracy/val", scalar_value=accuracy, global_step=global_step)
     return accuracy
 
 

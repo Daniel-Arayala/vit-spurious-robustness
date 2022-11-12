@@ -47,39 +47,24 @@ def get_resolution_from_dataset(dataset):
 
 def get_loader_train(args):
     mean, std = get_normalize_params(args)
-    print(mean, std)
-    if args.model_arch == "BiT":
-        precrop, crop = get_resolution_from_dataset(args.dataset)
-        transform_train = transforms.Compose([
-            transforms.Resize((precrop, precrop)),
-            transforms.RandomCrop((crop, crop)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std),
-        ])
-        transform_val = transforms.Compose([
-            transforms.Resize((crop, crop)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std),
-        ])
-    else:
-        # Transformation steps
-        transform_train_steps = [
-            transforms.RandomResizedCrop((args.img_size, args.img_size), scale=(0.05, 1.0)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ]
-        transform_val_steps = [
-            transforms.Resize((args.img_size, args.img_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ]
+    # Transformation steps
+    transform_train_steps = [
+        transforms.RandomResizedCrop((args.img_size, args.img_size), scale=(0.05, 1.0)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ]
+    transform_val_steps = [
+        transforms.Resize((args.img_size, args.img_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ]
 
-        if args.remove_crop_resize:
-            transform_train_steps = transform_train_steps[1:]
-            transform_val_steps = transform_val_steps[1:]
+    if args.remove_crop_resize:
+        transform_train_steps = transform_train_steps[1:]
+        transform_val_steps = transform_val_steps[1:]
 
-        transform_train = transforms.Compose(transform_train_steps)
-        transform_val = transforms.Compose(transform_val_steps)
+    transform_train = transforms.Compose(transform_train_steps)
+    transform_val = transforms.Compose(transform_val_steps)
 
     if args.dataset == "celebA":
         train_set = get_celebA_dataset(split="train", transform=transform_train,

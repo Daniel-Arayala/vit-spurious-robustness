@@ -4,9 +4,10 @@ import argparse
 import logging
 
 import torch
+from clearml import Task, TaskTypes
 
 from utils.comm_utils import set_seed
-from clearml import Task, TaskTypes
+from utils.loggers import TqdmToLogger
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ def main():
             task_name=f'Training {args.model_type} on {args.dataset}',
             task_type=TaskTypes.training,
             output_uri=True,
-            reuse_last_task_id=False,
+            # reuse_last_task_id=False,
             tags=[args.name, args.model_arch, args.model_type, args.dataset]
         )
 
@@ -79,7 +80,7 @@ def main():
     logging.basicConfig(format='[%(asctime)s] - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         level=logging.INFO)
-    logger.warning(f'Device: {args.device}, n_gpu: {args.n_gpu}')
+    logger.info(f'Device: {args.device}, n_gpu: {args.n_gpu}')
 
     # Set seed
     set_seed(args)

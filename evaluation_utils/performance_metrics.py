@@ -184,9 +184,8 @@ def plot_confusion_matrix(cm, title, xlabel, ylabel, output_path, output_fmt='bo
         vmin, vmax = None, None
         fmt = 'd'
         annot = True
-        cbar = True
     elif output_fmt == 'pct':
-        vmin, vmax = 0, 100
+        vmin, vmax = 0, 1
         cm = cm / np.sum()
         fmt = '.2%'
         annot = True
@@ -197,7 +196,7 @@ def plot_confusion_matrix(cm, title, xlabel, ylabel, output_path, output_fmt='bo
         cm_counts_str = [f'{value:0.0f}' for value in cm.flatten()]
         annot = [f'{pct_value}\n\n({abs_value})' for pct_value, abs_value in zip(cm_pct_str, cm_counts_str)]
         annot = np.array(annot).reshape(cm.shape)
-        cm = cm_pct
+        cm = cm_pct*100
         fmt = ''
     else:
         raise ValueError(f'Invalid argument for output_fmt: {output_fmt}')
