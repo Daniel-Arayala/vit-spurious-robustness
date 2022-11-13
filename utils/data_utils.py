@@ -123,19 +123,11 @@ def get_loader_train(args):
 def get_loader_inference(args, include_val=False):
     mean, std = get_normalize_params(args)
     val_set = None
-    if args.model_arch == "BiT":
-        precrop, crop = get_resolution_from_dataset(args.dataset)
-        transform_test = transforms.Compose([
-            transforms.Resize((crop, crop)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std),
-        ])
-    else:
-        transform_test = transforms.Compose([
-            transforms.Resize((args.img_size, args.img_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std),
-        ])
+    transform_test = transforms.Compose([
+        transforms.Resize((args.img_size, args.img_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std),
+    ])
 
     if args.dataset == "celebA":
         train_set = get_celebA_dataset(split="train", transform=transform_test,

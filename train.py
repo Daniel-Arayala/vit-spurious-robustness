@@ -67,7 +67,7 @@ def main():
             task_name=f'Training {args.model_type} on {args.dataset}',
             task_type=TaskTypes.training,
             output_uri=True,
-            # reuse_last_task_id=False,
+            reuse_last_task_id=False,
             tags=[args.name, args.model_arch, args.model_type, args.dataset]
         )
 

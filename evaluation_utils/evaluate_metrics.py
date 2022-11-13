@@ -138,7 +138,7 @@ def calculate_inference_metrics(args):
     except Exception:
         raise Exception("No CUDA enabled device found. Please Check!")
 
-    logger.info(f"Inference for Dataset: {args.dataset} \t Model : {args.model_type} ")
+    logger.info(f"Inference for Dataset: {args.dataset} | Model : {args.model_type} ")
     train_loader, val_loader, test_loader = get_loader_inference(args, include_val=True)
     # Train
     logger.info("Calculating Metrics for the Train data")
