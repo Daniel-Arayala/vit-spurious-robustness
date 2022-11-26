@@ -5,9 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import torch
+
+# TODO Update to torchmetrics
 from sklearn.metrics import (
     confusion_matrix,
     classification_report,
+    cohen_kappa_score,
+    roc_auc_score
 )
 
 from datasets.constants import CLASS_TYPE_MAP, EYEPACS_ENV_MAP_INV
@@ -31,7 +35,7 @@ def convert_inputs_to_list(y_true, y_pred):
     return y_true, y_pred
 
 
-def get_metrics(y_true, y_pred, class_type='bin', include_cm=False):
+def get_metrics(y_true, y_pred, probs, class_type='bin', include_cm=False):
     # Convert tensor to list
     y_true, y_pred = convert_inputs_to_list(y_true, y_pred)
 
@@ -43,9 +47,14 @@ def get_metrics(y_true, y_pred, class_type='bin', include_cm=False):
         labels = [0, 1]
 
     metrics = classification_report(y_true, y_pred, output_dict=True)
+    metrics['quadratic_cohen_kappa'] = cohen_kappa_score(y_true, y_pred, weights='quadratic')
+
+    if class_type == 'bin':
+        metrics['roc_auc_score'] = roc_auc_score(y_true, probs, average='macro')
 
     if include_cm:
         return metrics, confusion_matrix(y_true, y_pred, labels=labels)
+
     return metrics
 
 
@@ -139,9 +148,9 @@ def log_metrics_to_clearml(metrics, partition, clearml_logger):
             series='', table_plot=env_metrics_mult)
 
 
-def get_classification_metrics(y_true, y_pred, include_cm=False, class_types=('bin', 'mult')):
+def get_classification_metrics(y_true, y_pred, probs, include_cm=False, class_types=('bin', 'mult')):
     return {
-        class_type: get_metrics(y_true, y_pred, class_type=class_type, include_cm=include_cm)
+        class_type: get_metrics(y_true, y_pred, probs, class_type=class_type, include_cm=include_cm)
         for class_type in class_types}
 
 

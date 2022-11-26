@@ -48,9 +48,10 @@ class Metrics:
         else:
             return Metrics._convert_to_correct_output_fmt(metric_info, include_cm, output_fmt)
 
-    def append_batch_info(self, labels, preds, envs=None):
+    def append_batch_info(self, labels, preds, probs, envs=None):
         self.prediction_info['labels'].extend(labels)
         self.prediction_info['preds'].extend(preds)
+        self.prediction_info['probs'].extend(probs)
         if envs is not None:
             self.prediction_info['envs'].extend(envs)
 
@@ -60,6 +61,7 @@ class Metrics:
         metric_info = get_classification_metrics(
             y_true=self.df_prediction_info['labels'].values,
             y_pred=self.df_prediction_info['preds'].values,
+            probs=self.df_prediction_info['probs'].values,
             include_cm=include_cm)
         return Metrics._adjust_output_metric_info(metric_info, include_cm, output_fmt)
 
@@ -101,6 +103,7 @@ def get_partition_metrics(loader, model, partition):
         metrics.append_batch_info(
             labels=labels.cpu().numpy(),
             preds=preds.cpu().numpy(),
+            probs=logits.cpu().numpy(),
             envs=envs.cpu().numpy())
         # if count > 16: break
 
