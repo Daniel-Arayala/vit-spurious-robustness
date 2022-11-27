@@ -1,9 +1,13 @@
+import logging
 import os
 import time
+import urllib.request as url_request
 from os.path import join as pjoin
-import logging
+
 import numpy as np
 import torch
+import torch.nn.functional as F
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 import models.bits as models
@@ -11,13 +15,8 @@ import utils.bit_common as bit_common
 import utils.bit_hyperrule as bit_hyperrule
 import utils.lbtoolbox as lb
 from performance_metrics import get_classification_metrics, log_evaluation
-from torch.utils.tensorboard import SummaryWriter
-
 from utils.comm_utils import AverageMeter
 from utils.data_utils import get_loader_train
-import urllib.request as url_request
-
-from utils.loggers import TqdmToLogger
 
 BIT_STORAGE_TEMPLATE_URL = 'https://storage.googleapis.com/bit_models/%(model_type)s.npz'
 
@@ -47,7 +46,7 @@ def run_eval(model, data_loader, writer, device, chrono, step):
     model.eval()
     logger.info("Running validation...")
     eval_losses = AverageMeter()
-    all_preds, all_labels = [], []
+    all_preds, all_labels, all_probs = [], [], []
     epoch_iterator = tqdm(data_loader,
                           desc="Validating (loss=X.X)",
                           bar_format="{l_bar}{r_bar}",
@@ -67,10 +66,11 @@ def run_eval(model, data_loader, writer, device, chrono, step):
                 preds = torch.argmax(logits, dim=-1)
                 all_preds.extend(preds.detach().cpu().numpy())
                 all_labels.extend(y.detach().cpu().numpy())
+                all_probs.extend(F.softmax(logits).cpu().detach().numpy())
 
         epoch_iterator.set_description("Validating (loss=%2.5f)" % eval_losses.val)
         end = time.time()
-    val_metrics = get_classification_metrics(all_labels, all_preds)
+    val_metrics = get_classification_metrics(all_labels, all_preds, all_probs)
     log_evaluation(step, val_metrics, writer, 'val')
     writer.add_scalar("loss/val", scalar_value=eval_losses.avg, global_step=step)
     try:
@@ -139,7 +139,7 @@ def train_model(args):
     global_step, best_acc = 0, 0
     t_total = args.num_steps
     # Accumulates the predictions and labels for all batch splits adding to one full batch size
-    preds_effective_batch, labels_effective_batch = [], []
+    preds_effective_batch, labels_effective_batch, probs_effective_batch = [], [], []
     batch_loss_accum = 0  # Accumulates the average loss per split inside a batch
     with lb.Uninterrupt() as u:
         while True:
@@ -171,9 +171,11 @@ def train_model(args):
                     preds = torch.argmax(logits, dim=-1)
                     preds = preds.cpu().numpy()
                     labels = y.cpu().numpy()
+                    probs = F.softmax(logits).cpu().detach().numpy()
                     # Accumulating true and predicted for the whole batch size
                     preds_effective_batch.extend(preds)
                     labels_effective_batch.extend(labels)
+                    probs_effective_batch.extend(probs)
 
                 # accstep = f"({accum_steps}/{args.batch_split})" if args.batch_split > 1 else ""
                 # logger.info(f"[Accum steps: {accstep}]: loss={loss_num:.5f} (lr={lr:.1e})")
@@ -185,7 +187,8 @@ def train_model(args):
                         optim.step()
                         optim.zero_grad()
                     # Calculates train accuracy through iterations (every batch_split epochs)
-                    train_metrics = get_classification_metrics(preds_effective_batch, labels_effective_batch)
+                    train_metrics = get_classification_metrics(
+                        preds_effective_batch, labels_effective_batch, probs_effective_batch)
                     # Updating variables (Do not change position os these 2 lines)
                     global_step += 1
                     # Logging metrics
@@ -194,7 +197,7 @@ def train_model(args):
                     writer.add_scalar("loss/train", scalar_value=batch_loss_accum, global_step=global_step)
                     writer.add_scalar("lr", scalar_value=lr, global_step=global_step)
                     # Setting accumulators to empty to receive the next batch
-                    preds_effective_batch, labels_effective_batch = [], []
+                    preds_effective_batch, labels_effective_batch, probs_effective_batch = [], [], []
                     epoch_iterator.set_description(
                         "Training (%d / %d Steps) (loss=%2.5f)" % (global_step, t_total, batch_loss_accum)
                     )

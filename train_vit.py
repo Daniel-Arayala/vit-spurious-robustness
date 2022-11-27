@@ -11,6 +11,7 @@ from utils.comm_utils import set_seed, AverageMeter, accuracy_func
 from utils.data_utils import get_loader_train
 from utils.scheduler import WarmupCosineSchedule
 from evaluation_utils.performance_metrics import get_classification_metrics, log_evaluation
+import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ def train_model(args):
                               bar_format="{l_bar}{r_bar}",
                               dynamic_ncols=True)
         # Accumulates the predictions and labels for all batch splits adding to one full batch size
-        preds_effective_batch, labels_effective_batch = [], []
+        preds_effective_batch, labels_effective_batch, probs_effective_batch = [], [], []
         batch_loss_accum = 0  # Accumulates the average loss per split inside a batch
         for step, batch in enumerate(epoch_iterator):
             batch = tuple(t.to(args.device) for t in batch)
@@ -158,9 +159,11 @@ def train_model(args):
             preds = torch.argmax(logits, dim=-1)
             preds = preds.cpu().numpy()
             labels = y.cpu().numpy()
+            probs = F.softmax(logits).cpu().detach().numpy()
             # Accumulating true and predicted for the whole batch size
             preds_effective_batch.extend(preds)
             labels_effective_batch.extend(labels)
+            probs_effective_batch.extend(probs)
 
             if ((step + 1) % args.batch_split == 0) or (step + 1 == len(epoch_iterator)):
                 losses.update(batch_loss_accum)
@@ -176,13 +179,14 @@ def train_model(args):
                 )
 
                 # Calculates train accuracy through iterations (every batch_split epochs)
-                train_metrics = get_classification_metrics(preds_effective_batch, labels_effective_batch)
+                train_metrics = get_classification_metrics(
+                    preds_effective_batch, labels_effective_batch, probs_effective_batch)
                 log_evaluation(global_step, train_metrics, writer, 'train')
                 # writer.add_scalar("accuracy/train", scalar_value=train_acc, global_step=global_step)
                 writer.add_scalar("loss/train", scalar_value=losses.val, global_step=global_step)
                 writer.add_scalar("lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
                 # Setting accumulators to empty to receive the next batch
-                preds_effective_batch, labels_effective_batch = [], []
+                preds_effective_batch, labels_effective_batch, probs_effective_batch = [], [], []
 
                 if global_step % args.eval_every == 0:
                     accuracy = valid(args, model, writer, val_loader, global_step)

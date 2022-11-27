@@ -50,7 +50,11 @@ def get_metrics(y_true, y_pred, probs, class_type='bin', include_cm=False):
     metrics['quadratic_cohen_kappa'] = cohen_kappa_score(y_true, y_pred, weights='quadratic')
 
     if class_type == 'bin':
-        metrics['roc_auc_score'] = roc_auc_score(y_true, probs, average='macro')
+        probs_matrix = np.array(probs)
+        # Sums the probabilities for the positive binary case
+        # 1 --> Severities 2, 3, and 4
+        probs_matrix_bin_pos = probs_matrix[:, 2:].sum(keepdims=True, axis=1)
+        metrics['roc_auc_score'] = roc_auc_score(y_true, probs_matrix_bin_pos)
 
     if include_cm:
         return metrics, confusion_matrix(y_true, y_pred, labels=labels)
@@ -76,7 +80,7 @@ def log_evaluation(epoch, statistics, writer, partition, metric_scope='global'):
                 if metric_name.isnumeric() and metric_scope in ('class', 'all'):
                     graph_title = f'{partition.title()} - {cl_type} - Class {metric_name}'
                     writer.add_scalars(graph_title, metric_value, epoch)
-                elif metric_name == 'accuracy' and metric_scope in ('global', 'all'):
+                elif isinstance(metric_value, (float, int)) and metric_scope in ('global', 'all'):
                     writer.add_scalar(f'{metric_name.title()}/{partition}', metric_value, epoch)
                 # macro avg, weighted avg, and micro avg
                 elif (not metric_name.isnumeric()) and (metric_scope in ('global', 'all')):
