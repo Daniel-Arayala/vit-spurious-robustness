@@ -79,12 +79,11 @@ def valid(args, model, writer, test_loader, global_step):
             preds = torch.argmax(logits, dim=-1)
             probs = F.softmax(logits)
             # Appending prediction, labels, and probabilities
-            all_preds.append(preds.cpu().numpy())
-            all_labels.append(y.cpu().numpy())
-            all_probs.append(probs.cpu().numpy())
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(y.cpu().numpy())
+            all_probs.extend(probs.cpu().numpy())
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
 
-    all_preds, all_labels = all_preds[0], all_labels[0]
     val_metrics = get_classification_metrics(all_labels, all_preds, all_probs)
     log_evaluation(global_step, val_metrics, writer, 'val')
     writer.add_scalar("loss/val", scalar_value=eval_losses.avg, global_step=global_step)
