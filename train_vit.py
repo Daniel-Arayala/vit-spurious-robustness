@@ -10,20 +10,26 @@ from tqdm import tqdm
 from utils.comm_utils import set_seed, AverageMeter, accuracy_func
 from utils.data_utils import get_loader_train
 from utils.scheduler import WarmupCosineSchedule
-from evaluation_utils.performance_metrics import get_classification_metrics, log_evaluation
+from evaluation_utils.performance_metrics import (
+    get_classification_metrics,
+    log_evaluation,
+)
 import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
 model_dict = {
-    'ViT-B_16': 'vit_base_patch16_224_in21k',
-    'ViT-S_16': 'vit_small_patch16_224_in21k',
-    'ViT-Ti_16': 'vit_tiny_patch16_224_in21k'}
+    "ViT-B_16": "vit_base_patch16_224_in21k",
+    "ViT-S_16": "vit_small_patch16_224_in21k",
+    "ViT-Ti_16": "vit_tiny_patch16_224_in21k",
+}
 
 
 def save_model(args, model):
-    model_to_save = model.module if hasattr(model, 'module') else model
-    model_checkpoint_dir = os.path.join(args.output_dir, args.name, args.dataset, args.model_arch)
+    model_to_save = model.module if hasattr(model, "module") else model
+    model_checkpoint_dir = os.path.join(
+        args.output_dir, args.name, args.dataset, args.model_arch
+    )
     checkpoint_path = os.path.join(model_checkpoint_dir, args.model_type + ".bin")
     if not os.path.exists(checkpoint_path):
         os.makedirs(model_checkpoint_dir, exist_ok=True)
@@ -39,7 +45,7 @@ def setup(args):
         pretrained=True,
         num_classes=num_classes,
         drop_rate=0.1,
-        img_size=args.img_size
+        img_size=args.img_size,
     )
     model.reset_classifier(num_classes)
     model.to(args.device)
@@ -64,10 +70,12 @@ def valid(args, model, writer, test_loader, global_step):
 
     model.eval()
     all_preds, all_labels, all_probs = [], [], []
-    epoch_iterator = tqdm(test_loader,
-                          desc="Validating... (loss=X.X)",
-                          bar_format="{l_bar}{r_bar}",
-                          dynamic_ncols=True)
+    epoch_iterator = tqdm(
+        test_loader,
+        desc="Validating... (loss=X.X)",
+        bar_format="{l_bar}{r_bar}",
+        dynamic_ncols=True,
+    )
     loss_fct = torch.nn.CrossEntropyLoss()
     for step, batch in enumerate(epoch_iterator):
         batch = tuple(t.to(args.device) for t in batch)
@@ -85,12 +93,12 @@ def valid(args, model, writer, test_loader, global_step):
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
 
     val_metrics = get_classification_metrics(all_labels, all_preds, all_probs)
-    log_evaluation(global_step, val_metrics, writer, 'val')
+    log_evaluation(global_step, val_metrics, writer, "val")
     writer.add_scalar("loss/val", scalar_value=eval_losses.avg, global_step=global_step)
     try:
-        accuracy = val_metrics['mult']['accuracy']
+        accuracy = val_metrics["mult"]["accuracy"]
     except KeyError:
-        accuracy = val_metrics['bin']['accuracy']
+        accuracy = val_metrics["bin"]["accuracy"]
 
     logger.info("\n")
     logger.info("Validation Results")
@@ -104,41 +112,55 @@ def valid(args, model, writer, test_loader, global_step):
 def train_model(args):
     logger.info(f"Fine-tuning {args.model_type} on {args.dataset}")
     args, model = setup(args)
-    log_dir = os.path.join("logs", args.name, args.dataset, args.model_arch, args.model_type)
+    log_dir = os.path.join(
+        "logs", args.name, args.dataset, args.model_arch, args.model_type
+    )
     os.makedirs(log_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=log_dir)
     args.train_batch_size = args.train_batch_size // args.batch_split
     train_loader, val_loader = get_loader_train(args)
     cri = torch.nn.CrossEntropyLoss().to(args.device)
     # Prepare optimizer and scheduler
-    optimizer = torch.optim.SGD(model.parameters(),
-                                lr=args.learning_rate,
-                                momentum=0.9,
-                                weight_decay=args.weight_decay)
+    optimizer = torch.optim.SGD(
+        model.parameters(),
+        lr=args.learning_rate,
+        momentum=0.9,
+        weight_decay=args.weight_decay,
+    )
     t_total = args.num_steps
-    scheduler = WarmupCosineSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
+    scheduler = WarmupCosineSchedule(
+        optimizer, warmup_steps=args.warmup_steps, t_total=t_total
+    )
 
     # Train!
     logger.info("***** Running training *****")
     logger.info("  Total optimization steps = %d", args.num_steps)
     logger.info("  Instantaneous batch size per GPU = %d", args.train_batch_size)
-    logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d",
-                args.train_batch_size * args.batch_split)
+    logger.info(
+        "  Total train batch size (w. parallel, distributed & accumulation) = %d",
+        args.train_batch_size * args.batch_split,
+    )
     logger.info("  Gradient Accumulation steps = %d", args.batch_split)
 
     model.zero_grad()
-    set_seed(args)  
+    set_seed(args)
     losses = AverageMeter()
     global_step, best_acc = 0, 0
 
     while True:
         model.train()
-        epoch_iterator = tqdm(train_loader,
-                              desc="Training (X / X Steps) (loss=X.X)",
-                              bar_format="{l_bar}{r_bar}",
-                              dynamic_ncols=True)
+        epoch_iterator = tqdm(
+            train_loader,
+            desc="Training (X / X Steps) (loss=X.X)",
+            bar_format="{l_bar}{r_bar}",
+            dynamic_ncols=True,
+        )
         # Accumulates the predictions and labels for all batch splits adding to one full batch size
-        preds_effective_batch, labels_effective_batch, probs_effective_batch = [], [], []
+        preds_effective_batch, labels_effective_batch, probs_effective_batch = (
+            [],
+            [],
+            [],
+        )
         batch_loss_accum = 0  # Accumulates the average loss per split inside a batch
         for step, batch in enumerate(epoch_iterator):
             batch = tuple(t.to(args.device) for t in batch)
@@ -158,7 +180,9 @@ def train_model(args):
             labels_effective_batch.extend(labels)
             probs_effective_batch.extend(probs)
 
-            if ((step + 1) % args.batch_split == 0) or (step + 1 == len(epoch_iterator)):
+            if ((step + 1) % args.batch_split == 0) or (
+                step + 1 == len(epoch_iterator)
+            ):
                 losses.update(batch_loss_accum)
                 batch_loss_accum = 0
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
@@ -168,18 +192,28 @@ def train_model(args):
                 global_step += 1
 
                 epoch_iterator.set_description(
-                    "Training (%d / %d Steps) (loss=%2.5f)" % (global_step, t_total, losses.val)
+                    "Training (%d / %d Steps) (loss=%2.5f)"
+                    % (global_step, t_total, losses.val)
                 )
 
                 # Calculates train accuracy through iterations (every batch_split epochs)
                 train_metrics = get_classification_metrics(
-                    preds_effective_batch, labels_effective_batch, probs_effective_batch)
-                log_evaluation(global_step, train_metrics, writer, 'train')
+                    preds_effective_batch, labels_effective_batch, probs_effective_batch
+                )
+                log_evaluation(global_step, train_metrics, writer, "train")
                 # writer.add_scalar("accuracy/train", scalar_value=train_acc, global_step=global_step)
-                writer.add_scalar("loss/train", scalar_value=losses.val, global_step=global_step)
-                writer.add_scalar("lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
+                writer.add_scalar(
+                    "loss/train", scalar_value=losses.val, global_step=global_step
+                )
+                writer.add_scalar(
+                    "lr", scalar_value=scheduler.get_lr()[0], global_step=global_step
+                )
                 # Setting accumulators to empty to receive the next batch
-                preds_effective_batch, labels_effective_batch, probs_effective_batch = [], [], []
+                preds_effective_batch, labels_effective_batch, probs_effective_batch = (
+                    [],
+                    [],
+                    [],
+                )
 
                 if global_step % args.eval_every == 0:
                     accuracy = valid(args, model, writer, val_loader, global_step)
