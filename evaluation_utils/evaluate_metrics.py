@@ -103,7 +103,7 @@ def get_partition_metrics(loader, model, partition):
         metrics.append_batch_info(
             labels=labels.cpu().numpy(),
             preds=preds.cpu().numpy(),
-            probs=logits.cpu().numpy(),
+            probs=logits.cpu().detach().numpy(),
             envs=envs.cpu().numpy())
         # if count > 16: break
 
