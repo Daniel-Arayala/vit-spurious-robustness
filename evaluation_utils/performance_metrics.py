@@ -50,11 +50,12 @@ def get_metrics(y_true, y_pred, probs, class_type='bin', include_cm=False):
     metrics['quadratic_cohen_kappa'] = cohen_kappa_score(y_true, y_pred, weights='quadratic')
 
     if class_type == 'bin':
-        probs_matrix = np.array(probs)
+        probs_matrix = np.vstack(probs)
         # Sums the probabilities for the positive binary case
         # 1 --> Severities 2, 3, and 4
         probs_matrix_bin_pos = probs_matrix[:, 2:].sum(keepdims=True, axis=1)
-        metrics['roc_auc_score'] = roc_auc_score(y_true, probs_matrix_bin_pos)
+        if len(np.unique(y_true)) > 1:
+            metrics['roc_auc_score'] = roc_auc_score(y_true, probs_matrix_bin_pos)
 
     if include_cm:
         return metrics, confusion_matrix(y_true, y_pred, labels=labels)

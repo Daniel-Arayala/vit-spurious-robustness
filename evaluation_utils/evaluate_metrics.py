@@ -72,6 +72,7 @@ class Metrics:
             lambda df_env: get_classification_metrics(
                 y_true=df_env['labels'].values,
                 y_pred=df_env['preds'].values,
+                probs=df_env['probs'].values,
                 include_cm=include_cm))
         adjusted_env_metrics = {
             env_id: Metrics._adjust_output_metric_info(metrics, include_cm, output_fmt)
