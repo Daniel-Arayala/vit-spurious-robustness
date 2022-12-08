@@ -11,20 +11,21 @@ warnings.filterwarnings("ignore")
 
 
 class EyePacsDataset(Dataset):
-    def __init__(self, dataset_name, root_dir, split, transform):
+    def __init__(self, dataset_name, root_dir, split, transform, metadata_file_name='metadata'):
         self.dataset_name = dataset_name
         self.root_dir = root_dir
         self.split = split
         self.transform = transform
         self.dataset_dir = os.path.join(self.root_dir, self.dataset_name)
         self.env_dict = EYEPACS_ENV_MAP
+        self.metadata_file = metadata_file_name + '.csv'
         # Checks if the dataset folder exists
         if not os.path.exists(self.dataset_dir):
             raise ValueError(
                 f'{self.dataset_dir} does not exist yet. Please generate the dataset first.')
         # Reading the metadata dataframe
         self.metadata_df = pd.read_csv(
-            os.path.join(self.dataset_dir, 'metadata.csv'))
+            os.path.join(self.dataset_dir, self.metadata_file))
         self.metadata_df = self.metadata_df.loc[self.metadata_df['split'] == split]
         self.y_array = self.metadata_df['level'].values
         self.filename_array = self.metadata_df['image'].values
@@ -51,5 +52,10 @@ def get_eyepacs_dataloader(dataset_name, split, transform, root_dir, batch_size,
     return dataloader
 
 
-def get_eyepacs_dataset(dataset_name, split, transform, root_dir):
-    return EyePacsDataset(dataset_name=dataset_name, root_dir=root_dir, split=split, transform=transform)
+def get_eyepacs_dataset(dataset_name, split, transform, root_dir, metadata_file_name='metadata'):
+    return EyePacsDataset(
+        dataset_name=dataset_name,
+        root_dir=root_dir,
+        split=split,
+        transform=transform,
+        metadata_file_name=metadata_file_name)
