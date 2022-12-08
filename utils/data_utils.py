@@ -39,13 +39,17 @@ def get_normalize_params(args):
     if args.model_arch == "DeiT":
         mean = IMAGENET_DEFAULT_MEAN
         std = IMAGENET_DEFAULT_STD
+    elif args.dataset == "eyepacs":
+        mean = (0.4542, 0.3127, 0.2183)
+        std = (0.2783, 0.2014, 0.1655)
     else:
         mean = (0.5, 0.5, 0.5)
         std = (0.5, 0.5, 0.5)
+
     return mean, std
 
 
-def _get_mean_and_std(dataloader):
+def get_mean_and_std(dataloader):
     channels_sum, channels_squared_sum, num_batches = 0, 0, 0
     for data in dataloader:
         image = data[0]
@@ -95,12 +99,12 @@ def get_loader_train(args):
                 (args.img_size, args.img_size), scale=(0.05, 1.0)
             ),
             transforms.ToTensor(),
-            # transforms.Normalize(mean, std),
+            transforms.Normalize(mean, std),
         ]
     transform_val_steps = [
         transforms.Resize((args.img_size, args.img_size)),
         transforms.ToTensor(),
-        # transforms.Normalize(mean, std),
+        transforms.Normalize(mean, std),
     ]
 
     if args.remove_crop_resize:

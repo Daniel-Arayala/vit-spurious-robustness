@@ -1,15 +1,12 @@
 import argparse
 
 import torch
-from utils.data_utils import get_loader_train
+from utils.data_utils import get_loader_train, get_mean_and_std
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     # Required parameters
-    parser.add_argument(
-        "--name", required=True, help="Name of this run. Used for monitoring."
-    )
     parser.add_argument(
         "--dataset",
         choices=["waterbirds", "cmnist", "celebA", "eyepacs"],
@@ -49,46 +46,6 @@ def parse_args():
              "Will always run one evaluation at the end of training.",
     )
     parser.add_argument(
-        "-lr",
-        "--learning_rate",
-        default=3e-2,
-        type=float,
-        help="The initial learning rate for SGD.",
-    )
-    parser.add_argument(
-        "--weight_decay", default=0, type=float, help="Weight deay if we apply some."
-    )
-    parser.add_argument(
-        "--num_steps",
-        default=1500,
-        type=int,
-        help="Total number of training epochs to perform.",
-    )
-    parser.add_argument(
-        "--warmup_steps",
-        default=500,
-        type=int,
-        help="Step of training to perform learning rate warmup for.",
-    )
-    parser.add_argument(
-        "--max_grad_norm", default=1.0, type=float, help="Max gradient norm."
-    )
-    parser.add_argument(
-        "--metric_types", choices=["bin", "bin_out", "mult"], default=["bin", "mult"], nargs='+',
-        help="Types of metrics to calculate. If 'bin' indicates that the problem is binary by nature. "
-             "If 'bin_out' the multiclass output will be converted to binary and the metrics calculated. "
-             "If 'mult' the multiclass metrics will be calculated."
-    )
-    parser.add_argument(
-        "--seed", type=int, default=42, help="random seed for initialization"
-    )
-    parser.add_argument(
-        "--batch_split",
-        type=int,
-        default=16,
-        help="Number of updates steps to accumulate before performing a backward/update pass.",
-    )
-    parser.add_argument(
         "--num_workers",
         type=int,
         default=2,
@@ -118,11 +75,6 @@ def parse_args():
         help="Whether to remove the random crops and resizing of the input images.",
     )
     parser.add_argument(
-        "--use_clearml",
-        action="store_true",
-        help="Whether to use the ClearML tool as an experiment tracker",
-    )
-    parser.add_argument(
         "--balance_classes",
         action="store_true",
         help="Handle imbalanced classes with WeightedRandomSampler",
@@ -133,28 +85,15 @@ def parse_args():
         help="Use data augmentation based on kaggle competition notebooks",
     )
 
-    args = parser.parse_args()
-
-def get_mean_and_std(dataloader):
-    channels_sum, channels_squared_sum, num_batches = 0, 0, 0
-    for data, _ in dataloader:
-        # Mean over batch, height and width, but not over the channels
-        channels_sum += torch.mean(data, dim=[0, 2, 3])
-        channels_squared_sum += torch.mean(data ** 2, dim=[0, 2, 3])
-        num_batches += 1
-
-    mean = channels_sum / num_batches
-
-    # std = sqrt(E[X^2] - (E[X])^2)
-    std = (channels_squared_sum / num_batches - mean ** 2) ** 0.5
-
-    return mean, std
+    return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    train_loader, _ = get_loader_train(args)
+    mean, std = get_mean_and_std(train_loader)
+    print(f'Mean: {mean} | Std: {std}')
 
 
 if __name__ == '__main__':
-    train_loader = get_loader_train()
-    get_mean_and_std()
+    main()
