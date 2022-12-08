@@ -92,7 +92,7 @@ def valid(args, model, writer, test_loader, global_step):
             all_probs.extend(probs.cpu().numpy())
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
 
-    val_metrics = get_classification_metrics(all_labels, all_preds, all_probs)
+    val_metrics = get_classification_metrics(all_labels, all_preds, all_probs, class_types=args.class_types)
     log_evaluation(global_step, val_metrics, writer, "val")
     writer.add_scalar("loss/val", scalar_value=eval_losses.avg, global_step=global_step)
     try:
@@ -198,7 +198,10 @@ def train_model(args):
 
                 # Calculates train accuracy through iterations (every batch_split epochs)
                 train_metrics = get_classification_metrics(
-                    preds_effective_batch, labels_effective_batch, probs_effective_batch
+                    preds_effective_batch,
+                    labels_effective_batch,
+                    probs_effective_batch,
+                    class_types=tuple(args.metric_types)
                 )
                 log_evaluation(global_step, train_metrics, writer, "train")
                 # writer.add_scalar("accuracy/train", scalar_value=train_acc, global_step=global_step)

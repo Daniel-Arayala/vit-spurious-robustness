@@ -201,7 +201,7 @@ def train_model(args):
 
                 # Update params
                 if ((step + 1) % args.batch_split == 0) or (
-                    step + 1 == len(epoch_iterator)
+                        step + 1 == len(epoch_iterator)
                 ):
                     with chrono.measure("update"):
                         optim.step()
@@ -211,6 +211,7 @@ def train_model(args):
                         preds_effective_batch,
                         labels_effective_batch,
                         probs_effective_batch,
+                        class_types=tuple(args.metric_types)
                     )
                     # Updating variables (Do not change position os these 2 lines)
                     global_step += 1

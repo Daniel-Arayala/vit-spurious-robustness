@@ -1,17 +1,10 @@
-from __future__ import absolute_import, division, print_function
-
 import argparse
-import logging
 
 import torch
-from clearml import Task, TaskTypes
-
-from utils.comm_utils import set_seed
-
-logger = logging.getLogger(__name__)
+from utils.data_utils import get_loader_train
 
 
-def main():
+def parse_args():
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument(
@@ -142,41 +135,26 @@ def main():
 
     args = parser.parse_args()
 
-    if args.use_clearml:
-        # Setting up ClearML tracking
-        task = Task.init(
-            project_name=f"ViTs Robustness to Spurious Correlation/{args.name}/{args.model_arch}",
-            task_name=f"Training {args.model_type} on {args.dataset}",
-            task_type=TaskTypes.training,
-            output_uri=True,
-            reuse_last_task_id=False,
-            tags=[args.name, args.model_arch, args.model_type, args.dataset],
-        )
+def get_mean_and_std(dataloader):
+    channels_sum, channels_squared_sum, num_batches = 0, 0, 0
+    for data, _ in dataloader:
+        # Mean over batch, height and width, but not over the channels
+        channels_sum += torch.mean(data, dim=[0, 2, 3])
+        channels_squared_sum += torch.mean(data ** 2, dim=[0, 2, 3])
+        num_batches += 1
 
-    # Setup device (CUDA GPU or CPU)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    args.n_gpu = torch.cuda.device_count()
-    args.device = device
+    mean = channels_sum / num_batches
 
-    # Setup logging
-    logging.basicConfig(
-        format="[%(asctime)s] - %(levelname)s - %(name)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.INFO,
-    )
-    logger.info(f"Device: {args.device}, n_gpu: {args.n_gpu}")
+    # std = sqrt(E[X^2] - (E[X])^2)
+    std = (channels_squared_sum / num_batches - mean ** 2) ** 0.5
 
-    # Set seed
-    set_seed(args)
-
-    # Training
-    if args.model_arch == "BiT":
-        from train_bit import train_model
-        train_model(args)
-    elif args.model_arch == "ViT":
-        from train_vit import train_model
-        train_model(args)
+    return mean, std
 
 
-if __name__ == "__main__":
-    main()
+def main():
+    args = parse_args()
+
+
+if __name__ == '__main__':
+    train_loader = get_loader_train()
+    get_mean_and_std()
