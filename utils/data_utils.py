@@ -1,21 +1,17 @@
-import logging
-
 import numpy as np
 import torch
 from torch.utils.data import (
     DataLoader,
     Dataset,
-    DistributedSampler,
     RandomSampler,
-    SequentialSampler,
     WeightedRandomSampler,
 )
 from torchvision import transforms
 
-from datasets.celebA_dataset import get_celebA_dataloader, get_celebA_dataset
-from datasets.color_mnist import get_biased_mnist_dataloader, get_biased_mnist_dataset
-from datasets.eyepacs_dataset import get_eyepacs_dataloader, get_eyepacs_dataset
-from datasets.waterbirds_dataset import get_waterbird_dataloader, get_waterbird_dataset
+from datasets.celebA_dataset import get_celebA_dataset
+from datasets.color_mnist import get_biased_mnist_dataset
+from datasets.eyepacs_dataset import get_eyepacs_dataset
+from datasets.waterbirds_dataset import get_waterbird_dataset
 
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)

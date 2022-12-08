@@ -92,7 +92,7 @@ def valid(args, model, writer, test_loader, global_step):
             all_probs.extend(probs.cpu().numpy())
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
 
-    val_metrics = get_classification_metrics(all_labels, all_preds, all_probs, class_types=args.class_types)
+    val_metrics = get_classification_metrics(all_labels, all_preds, all_probs, class_types=args.metric_types)
     log_evaluation(global_step, val_metrics, writer, "val")
     writer.add_scalar("loss/val", scalar_value=eval_losses.avg, global_step=global_step)
     try:
