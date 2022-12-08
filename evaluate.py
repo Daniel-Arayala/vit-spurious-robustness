@@ -31,6 +31,14 @@ def main():
                         help="Number of workers to use for the DataLoader.")
     parser.add_argument('--num_classes', type=int, default=2,
                         help="Number of classes for the classification task.")
+    parser.add_argument("--dataset_folder_name", type=str,
+                        default="reduced_eyepacs_resized_cropped",
+                        help="Name of the folder where thedataset is located. "
+                             "Defaults to 'reduced_eyepacs_resized_cropped'")
+    parser.add_argument("--metadata_file_name", type=str,
+                        default="metadata",
+                        help="Name of the metadata csv file containing the image "
+                             "metadata and splits. Defaults to 'metadata'.")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
     parser.add_argument('--use_clearml', action='store_true',

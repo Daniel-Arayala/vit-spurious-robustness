@@ -164,16 +164,18 @@ def get_loader_train(args):
     elif args.dataset == "eyepacs":
         train_set = get_eyepacs_dataset(
             root_dir="datasets",
-            dataset_name="reduced_eyepacs_resized_cropped",
+            dataset_name=args.dataset_folder_name,
             split="train",
             transform=transform_train,
+            metadata_file_name=args.metadata_file_name
         )
 
         val_set = get_eyepacs_dataset(
             root_dir="datasets",
-            dataset_name="reduced_eyepacs_resized_cropped",
+            dataset_name=args.dataset_folder_name,
             split="val",
             transform=transform_val,
+            metadata_file_name=args.metadata_file_name
         )
     else:
         raise NotImplemented(f"Invalid dataset option: {args.dataset}")
@@ -183,7 +185,7 @@ def get_loader_train(args):
     else:
         train_sampler = RandomSampler(train_set)
 
-    val_sampler = SequentialSampler(val_set)
+    val_sampler = RandomSampler(val_set)
     train_loader = DataLoader(
         train_set,
         sampler=train_sampler,
@@ -272,23 +274,25 @@ def get_loader_inference(args, include_val=False):
     elif args.dataset == "eyepacs":
         train_set = get_eyepacs_dataset(
             root_dir="datasets",
-            dataset_name="reduced_eyepacs_resized_cropped",
+            dataset_name=args.dataset_folder_name,
             split="train",
             transform=transform_test,
         )
 
         test_set = get_eyepacs_dataset(
             root_dir="datasets",
-            dataset_name="reduced_eyepacs_resized_cropped",
+            dataset_name=args.dataset_folder_name,
             split="test",
             transform=transform_test,
+            metadata_file_name=args.metadata_file_name
         )
         if include_val:
             val_set = get_eyepacs_dataset(
                 root_dir="datasets",
-                dataset_name="reduced_eyepacs_resized_cropped",
+                dataset_name=args.dataset_folder_name,
                 split="val",
                 transform=transform_test,
+                metadata_file_name=args.metadata_file_name
             )
 
     else:
@@ -333,8 +337,8 @@ def get_loader_inference(args, include_val=False):
         return train_loader, test_loader
 
 
-def _build_weighted_sampler(eyepecs_dataset: Dataset, batch_size: int):
-    _, counts = np.unique(eyepecs_dataset.y_array, return_counts=True)
+def _build_weighted_sampler(eyepacs_dataset: Dataset, batch_size: int):
+    _, counts = np.unique(eyepacs_dataset.y_array, return_counts=True)
     weights = 1 / torch.Tensor(counts)
     # weights = 1 - torch.Tensor(counts) / counts.sum()
     weights = torch.nn.functional.normalize(weights, p=1, dim=0)

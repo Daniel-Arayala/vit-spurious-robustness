@@ -1,0 +1,7 @@
+#! /bin/sh
+# Balanced training considering the number of samples of the minority class with the fewest samples
+python train.py --name balanced_train_no_repos_full_eyepacs --model_arch BiT --model_type BiT-M-R50x1 --metadata_file_name metadata_balanced_train_baseline  --dataset eyepacs --dataset_folder_name eyepacs --num_steps 500 --num_workers 2 --learning_rate 0.003 --img_size 256 --batch_split 32 --train_batch_size 512 --eval_batch_size 16 --eval_every 10 --num_classes 5 --use_clearml
+python evaluate.py --name balanced_train_no_repos_full_eyepacs --dataset eyepacs --dataset_folder_name eyepacs  --model_arch BiT --model_type BiT-M-R50x1 --metadata_file_name metadata_balanced_train_baseline --img_size 256 --batch_size 512 --num_workers 2 --num_classes 5 --use_clearml
+
+python train.py --name balanced_train_no_repos_full_eyepacs --model_arch ViT --model_type ViT-S_16 --metadata_file_name metadata_balanced_train_baseline --dataset eyepacs --dataset_folder_name eyepacs --warmup_steps 200 --num_steps 500 --num_workers 2 --learning_rate 0.03 --img_size 256 --batch_split 32 --train_batch_size 512 --eval_batch_size 16 --eval_every 10 --num_classes 5 --use_clearml
+python evaluate.py --name balanced_train_no_repos_full_eyepacs --dataset eyepacs --dataset_folder_name eyepacs --model_arch ViT --model_type ViT-S_16 --metadata_file_name metadata_balanced_train_baseline --img_size 256 --batch_size 512 --num_workers 2 --num_classes 5 --use_clearml
