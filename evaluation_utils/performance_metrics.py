@@ -38,25 +38,22 @@ def convert_inputs_to_list(y_true, y_pred):
 def get_metrics(y_true, y_pred, probs, class_type='bin', include_cm=False):
     # Convert tensor to list
     y_true, y_pred = convert_inputs_to_list(y_true, y_pred)
-
-    labels = list(range(5))
+    probs_matrix = np.vstack(probs)
+    labels = list(range(probs_matrix.shape[1]))
     # Binarization
     if class_type == 'bin_out':
         y_true = get_binary_results(y_true)
         y_pred = get_binary_results(y_pred)
-        labels = [0, 1]
 
     metrics = classification_report(y_true, y_pred, output_dict=True)
     metrics['quadratic_cohen_kappa'] = cohen_kappa_score(y_true, y_pred, weights='quadratic')
 
     probs_matrix_bin_pos = None
     if class_type == 'bin_out':
-        probs_matrix = np.vstack(probs)
         # Sums the probabilities for the positive binary case
         # 1 --> Severities 2, 3, and 4
         probs_matrix_bin_pos = probs_matrix[:, 2:].sum(keepdims=True, axis=1)
     elif class_type == 'bin':
-        probs_matrix = np.vstack(probs)
         probs_matrix_bin_pos = probs_matrix[:, 1]
 
     if class_type.startswith('bin') and len(np.unique(y_true)) > 1:
