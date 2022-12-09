@@ -43,7 +43,8 @@ def main():
                         help="random seed for initialization")
     parser.add_argument('--use_clearml', action='store_true',
                         help="Whether to use the ClearML tool as an experiment tracker")
-
+    parser.add_argument('--save_prediction_info', action='store_true',
+                        help="Whether to save the detailed prediction information per image.")
     args = parser.parse_args()
     logging.basicConfig(format='[%(asctime)s] - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
@@ -55,7 +56,7 @@ def main():
             project_name=f'ViTs Robustness to Spurious Correlation/{args.name}/{args.model_arch}',
             task_name=f'Evaluating {args.model_type} on {args.dataset}',
             task_type=TaskTypes.inference,
-            reuse_last_task_id=False,
+            #reuse_last_task_id=False,
             tags=[args.model_arch, args.model_type, args.dataset]
         )
     calculate_inference_metrics(args)
