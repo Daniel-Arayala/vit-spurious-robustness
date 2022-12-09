@@ -89,7 +89,7 @@ class Metrics:
         return df_env_count
 
 
-def get_partition_metrics(loader, model, partition, return_pred_info=False):
+def get_partition_metrics(loader, model, partition, class_types, return_pred_info=False):
     metrics = Metrics()
     count = 0
     epoch_iterator = tqdm(loader,
@@ -116,7 +116,10 @@ def get_partition_metrics(loader, model, partition, return_pred_info=False):
             image_paths_partition.extend(image_paths)
 
     result_info = {
-        'partition': metrics.calculate_metrics(include_cm=True, output_fmt='df'),
+        'partition': metrics.calculate_metrics(
+            include_cm=True,
+            output_fmt='df',
+            class_types=tuple(class_types)),
         'env': metrics.calculate_metrics_per_env(include_cm=True, output_fmt='df')
     }
     if return_pred_info:
@@ -164,43 +167,52 @@ def calculate_inference_metrics(args):
     # Train
     logger.info("Calculating Metrics for the Train data")
     result_train: dict = get_partition_metrics(
-        train_loader, model, partition='train', return_pred_info=args.save_prediction_info)
+        train_loader, model,
+        partition='train',
+        class_types=args.metric_types,
+        return_pred_info=args.save_prediction_info)
     logger.info(f'Train Metrics: {result_train}')
 
     # Validation
-    # logger.info("Calculating Metrics for the Validation data")
-    # result_val: dict = get_partition_metrics(
-    #     val_loader, model, partition='val', return_pred_info=args.save_prediction_info)
-    # logger.info(f'Test Metrics: {result_val}')
+    logger.info("Calculating Metrics for the Validation data")
+    result_val: dict = get_partition_metrics(
+        val_loader, model,
+        partition='val',
+        class_types=args.metric_types,
+        return_pred_info=args.save_prediction_info)
+    logger.info(f'Test Metrics: {result_val}')
     # Test
-    # logger.info("Calculating Metrics for the Test data")
-    # result_test: dict = get_partition_metrics(
-    #     test_loader, model, partition='test', return_pred_info=args.save_prediction_info)
-    # logger.info(f'Test Metrics: {result_test}')
+    logger.info("Calculating Metrics for the Test data")
+    result_test: dict = get_partition_metrics(
+        test_loader, model,
+        partition='test',
+        class_types=args.metric_types,
+        return_pred_info=args.save_prediction_info)
+    logger.info(f'Test Metrics: {result_test}')
 
     if args.save_prediction_info:
         logger.info('Saving detailed prediction information locally')
         result_train, pred_info_train = result_train
-        # result_val, pred_info_val = result_val
-        # result_test, pred_info_test = result_test
+        result_val, pred_info_val = result_val
+        result_test, pred_info_test = result_test
         save_prediction_info_locally(args, pred_info_train, partition='train')
-        # save_prediction_info_locally(args, pred_info_val, partition='val')
-        # save_prediction_info_locally(args, pred_info_test, partition='test')
+        save_prediction_info_locally(args, pred_info_val, partition='val')
+        save_prediction_info_locally(args, pred_info_test, partition='test')
         if args.use_clearml:
             logger.info('Uploading detailed prediction information to clearml')
             task = Task.current_task()
             task.upload_artifact('train_pred_info', artifact_object=pred_info_train)
-            # task.upload_artifact('val_pred_info', artifact_object=pred_info_val)
-            # task.upload_artifact('test_pred_info', artifact_object=pred_info_test)
+            task.upload_artifact('val_pred_info', artifact_object=pred_info_val)
+            task.upload_artifact('test_pred_info', artifact_object=pred_info_test)
 
     if args.use_clearml:
         clearml_logger = Logger.current_logger()
         logger.info('Adding train metrics to ClearML')
         log_metrics_to_clearml(result_train, 'train', clearml_logger)
-        # logger.info('Adding validation metrics to ClearML')
-        # log_metrics_to_clearml(result_val, 'validation', clearml_logger)
-        # logger.info('Adding test metrics to ClearML')
-        # log_metrics_to_clearml(result_test, 'test', clearml_logger)
+        logger.info('Adding validation metrics to ClearML')
+        log_metrics_to_clearml(result_val, 'validation', clearml_logger)
+        logger.info('Adding test metrics to ClearML')
+        log_metrics_to_clearml(result_test, 'test', clearml_logger)
 
 
 def main():

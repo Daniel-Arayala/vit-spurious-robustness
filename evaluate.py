@@ -39,6 +39,10 @@ def main():
                         default="metadata",
                         help="Name of the metadata csv file containing the image "
                              "metadata and splits. Defaults to 'metadata'.")
+    parser.add_argument("--metric_types", choices=["bin", "bin_out", "mult"], default=["bin", "mult"], nargs='+',
+                        help="Types of metrics to calculate. If 'bin' indicates that the problem is binary "
+                             "by nature. If 'bin_out' the multiclass output will be converted to binary and the "
+                             "metrics calculated. If 'mult' the multiclass metrics will be calculated.")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
     parser.add_argument('--use_clearml', action='store_true',
@@ -56,7 +60,7 @@ def main():
             project_name=f'ViTs Robustness to Spurious Correlation/{args.name}/{args.model_arch}',
             task_name=f'Evaluating {args.model_type} on {args.dataset}',
             task_type=TaskTypes.inference,
-            #reuse_last_task_id=False,
+            reuse_last_task_id=False,
             tags=[args.model_arch, args.model_type, args.dataset]
         )
     calculate_inference_metrics(args)
