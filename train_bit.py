@@ -48,7 +48,7 @@ def recycle(iterable):
             yield i
 
 
-def run_eval(model, data_loader, writer, device, chrono, step):
+def run_eval(model, data_loader, writer, device, chrono, step, class_types):
     model.eval()
     logger.info("Running validation...")
     eval_losses = AverageMeter()
@@ -78,14 +78,10 @@ def run_eval(model, data_loader, writer, device, chrono, step):
 
         epoch_iterator.set_description("Validating (loss=%2.5f)" % eval_losses.val)
         end = time.time()
-    val_metrics = get_classification_metrics(all_labels, all_preds, all_probs)
+    val_metrics = get_classification_metrics(all_labels, all_preds, all_probs, class_types=class_types)
     log_evaluation(step, val_metrics, writer, "val")
     writer.add_scalar("loss/val", scalar_value=eval_losses.avg, global_step=step)
-    try:
-        accuracy = val_metrics["mult"]["accuracy"]
-    except KeyError:
-        accuracy = val_metrics["bin"]["accuracy"]
-
+    accuracy = val_metrics[list(val_metrics.keys())[0]]['accuracy']
     logger.info("\n")
     logger.info("Validation Results")
     logger.info("Global Steps: %d" % step)
@@ -211,7 +207,7 @@ def train_model(args):
                         preds_effective_batch,
                         labels_effective_batch,
                         probs_effective_batch,
-                        class_types=tuple(args.metric_types)
+                        class_types=args.metric_types
                     )
                     # Updating variables (Do not change position os these 2 lines)
                     global_step += 1
@@ -236,7 +232,8 @@ def train_model(args):
                     )
                     batch_loss_accum = 0
                     if args.eval_every and global_step % args.eval_every == 0:
-                        acc = run_eval(model, valid_loader, writer, args.device, chrono, global_step)
+                        acc = run_eval(model, valid_loader, writer, args.device,
+                                       chrono, global_step, class_types=args.metric_types)
                         if best_acc < acc:
                             logger.info("Saved model checkpoint")
                             best_acc = acc

@@ -208,11 +208,11 @@ def calculate_inference_metrics(args):
     if args.use_clearml:
         clearml_logger = Logger.current_logger()
         logger.info('Adding train metrics to ClearML')
-        log_metrics_to_clearml(result_train, 'train', clearml_logger)
+        log_metrics_to_clearml(result_train, 'train', clearml_logger, class_types=args.metric_types)
         logger.info('Adding validation metrics to ClearML')
-        log_metrics_to_clearml(result_val, 'validation', clearml_logger)
+        log_metrics_to_clearml(result_val, 'validation', clearml_logger, class_types=args.metric_types)
         logger.info('Adding test metrics to ClearML')
-        log_metrics_to_clearml(result_test, 'test', clearml_logger)
+        log_metrics_to_clearml(result_test, 'test', clearml_logger, class_types=args.metric_types)
 
 
 def main():
