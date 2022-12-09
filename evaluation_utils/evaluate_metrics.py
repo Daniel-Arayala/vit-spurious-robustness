@@ -67,7 +67,7 @@ class Metrics:
             class_types=class_types)
         return Metrics._adjust_output_metric_info(metric_info, include_cm, output_fmt)
 
-    def calculate_metrics_per_env(self, include_cm=False, output_fmt='dict'):
+    def calculate_metrics_per_env(self, include_cm=False, output_fmt='dict', class_types=('bin_out', 'mult')):
         if self.df_prediction_info is None:
             self._consolidate_batch_info()
         env_metric_info = self.df_prediction_info.groupby('envs').apply(
@@ -75,7 +75,7 @@ class Metrics:
                 y_true=df_env['labels'].values,
                 y_pred=df_env['preds'].values,
                 probs=df_env['probs'].values,
-                include_cm=include_cm))
+                include_cm=include_cm, class_types=class_types))
         adjusted_env_metrics = {
             env_id: Metrics._adjust_output_metric_info(metrics, include_cm, output_fmt)
             for env_id, metrics in env_metric_info.to_dict().items()}
@@ -120,7 +120,10 @@ def get_partition_metrics(loader, model, partition, class_types, return_pred_inf
             include_cm=True,
             output_fmt='df',
             class_types=tuple(class_types)),
-        'env': metrics.calculate_metrics_per_env(include_cm=True, output_fmt='df')
+        'env': metrics.calculate_metrics_per_env(
+            include_cm=True,
+            output_fmt='df',
+            class_types=tuple(class_types))
     }
     if return_pred_info:
         info_pred = np.vstack((
