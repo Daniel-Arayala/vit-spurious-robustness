@@ -277,6 +277,7 @@ def get_loader_inference(args, include_val=False):
             dataset_name=args.dataset_folder_name,
             split="train",
             transform=transform_test,
+            metadata_file_name=args.metadata_file_name
         )
 
         test_set = get_eyepacs_dataset(
