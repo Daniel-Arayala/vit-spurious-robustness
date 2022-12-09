@@ -75,7 +75,10 @@ def log_evaluation(epoch, statistics, writer, partition, metric_scope='global'):
         'all': logs both class-specific metrics and global metrics
     """
     statistics_keys = list(statistics.keys())
-    has_classification_type = ('bin' in statistics_keys) or ('mult' in statistics_keys)
+    has_classification_type = \
+        ('bin' in statistics_keys) \
+        or ('bin_out' in statistics_keys) \
+        or ('mult' in statistics_keys)
     if has_classification_type:
         for classification_type, metric_info in statistics.items():
             cl_type = CLASS_TYPE_MAP[classification_type]

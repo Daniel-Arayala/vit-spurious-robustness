@@ -24,5 +24,6 @@ EYEPACS_ENV_MAP_INV = {
 
 CLASS_TYPE_MAP = {
     'bin': 'Binary',
-    'mult': 'Multiclass'
+    'mult': 'Multiclass',
+    'bin_out': 'Binarized Output'
 }

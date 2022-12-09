@@ -81,7 +81,7 @@ def main():
         "--max_grad_norm", default=1.0, type=float, help="Max gradient norm."
     )
     parser.add_argument(
-        "--metric_types", choices=["bin", "bin_out", "mult"], default=["bin", "mult"], nargs='+',
+        "--metric_types", choices=["bin", "bin_out", "mult"], default=["bin_out", "mult"], nargs='+',
         help="Types of metrics to calculate. If 'bin' indicates that the problem is binary by nature. "
              "If 'bin_out' the multiclass output will be converted to binary and the metrics calculated. "
              "If 'mult' the multiclass metrics will be calculated."
