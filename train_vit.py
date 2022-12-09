@@ -79,7 +79,7 @@ def valid(args, model, writer, test_loader, global_step):
     loss_fct = torch.nn.CrossEntropyLoss()
     for step, batch in enumerate(epoch_iterator):
         batch = tuple(t.to(args.device) for t in batch)
-        x, y, _ = batch
+        x, y, _, _ = batch
         with torch.no_grad():
             logits = model(x)
             eval_loss = loss_fct(logits, y)
@@ -164,7 +164,7 @@ def train_model(args):
         batch_loss_accum = 0  # Accumulates the average loss per split inside a batch
         for step, batch in enumerate(epoch_iterator):
             batch = tuple(t.to(args.device) for t in batch)
-            x, y, _ = batch
+            x, y, _, _ = batch
             logits = model(x)
             loss = cri(logits.view(-1, args.num_classes), y.view(-1))
             loss = loss / args.batch_split

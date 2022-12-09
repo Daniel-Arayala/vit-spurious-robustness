@@ -61,11 +61,11 @@ def run_eval(model, data_loader, writer, device, chrono, step):
         dynamic_ncols=True,
     )
     end = time.time()
-    for x, y, g in epoch_iterator:
+    for batch in epoch_iterator:
         with torch.no_grad():
+            x, y, _, _ = batch
             x = x.to(device, non_blocking=True)
             y = y.to(device, non_blocking=True)
-            g = g.to(device, non_blocking=True)
             chrono._done("eval load", time.time() - end)
             with chrono.measure("eval fprop"):
                 logits = model(x)
@@ -160,7 +160,7 @@ def train_model(args):
     with lb.Uninterrupt() as u:
         while True:
             for step, batch in enumerate(epoch_iterator):
-                x, y, _ = batch
+                x, y, _, _ = batch
                 chrono._done("load", time.time() - end)
                 if u.interrupted:
                     break
@@ -236,19 +236,11 @@ def train_model(args):
                     )
                     batch_loss_accum = 0
                     if args.eval_every and global_step % args.eval_every == 0:
-                        acc = run_eval(
-                            model,
-                            valid_loader,
-                            writer,
-                            args.device,
-                            chrono,
-                            global_step,
-                        )
+                        acc = run_eval(model, valid_loader, writer, args.device, chrono, global_step)
                         if best_acc < acc:
                             logger.info("Saved model checkpoint")
                             best_acc = acc
-                            torch.save(
-                                {
+                            torch.save({
                                     "step": global_step,
                                     "model": model.state_dict(),
                                     "optim": optim.state_dict(),

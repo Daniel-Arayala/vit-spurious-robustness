@@ -100,65 +100,57 @@ def log_evaluation(epoch, statistics, writer, partition, metric_scope='global'):
                         writer.add_scalar(graph_title_metric_group, nested_metric_value, epoch)
 
 
-def log_metrics_to_clearml(metrics, partition, clearml_logger):
+def save_prediction_info_locally(args, pred_info, partition='train', pred_root_dir='predictions'):
+    pred_output_dir = os.path.join(
+        pred_root_dir, args.name, args.dataset,
+        args.model_arch, args.model_type, partition)
+    os.makedirs(pred_output_dir, exist_ok=True)
+    pred_output_file = os.path.join(pred_output_dir, 'df_pred_info.csv')
+    pred_info.to_csv(pred_output_file, index=False)
+
+
+def log_metrics_to_clearml(metrics, partition, clearml_logger, class_types=('bin_out', 'mult')):
+    translation_class_types = {
+        'bin': 'Binary',
+        'bin_out': 'Binarized Output',
+        'mult': 'Multiclass'
+    }
     base_output_dir = os.path.join(Path(__file__).parents[1], 'metrics')
     os.makedirs(base_output_dir, exist_ok=True)
     # Metrics for the entire train, validation, or test partitions
-    part_metrics_bin = metrics['partition']['bin']
-    part_metrics_mult = metrics['partition']['mult']
-    # Binary
-    if isinstance(part_metrics_bin, tuple):
-        part_metrics_bin, cm_bin = part_metrics_bin
-        plot_confusion_matrix(
-            cm=cm_bin,
-            title=f'Confusion Matrix {partition.title()} (Binary)',
-            xlabel='Predicted', ylabel='Actual',
-            output_path=os.path.join(base_output_dir, f'CMPart{partition.title()}Bin.png'))
-    clearml_logger.report_table(
-        title=f'{partition.title()} Metrics (Binary)',
-        series='', table_plot=part_metrics_bin)
-
-    if isinstance(part_metrics_mult, tuple):
-        part_metrics_mult, cm_mult = part_metrics_mult
-        plot_confusion_matrix(
-            cm=cm_mult,
-            title=f'Confusion Matrix {partition.title()} (Multiclass)',
-            xlabel='Predicted', ylabel='Actual',
-            output_path=os.path.join(base_output_dir, f'CMPart{partition.title()}Mult.png'))
-    clearml_logger.report_table(
-        title=f'{partition.title()} Metrics (Multiclass)',
-        series='', table_plot=part_metrics_mult)
+    for class_type in class_types:
+        part_metrics = metrics['partition'][class_type]
+        if isinstance(part_metrics, tuple):
+            part_metrics, cm_part = part_metrics
+            plot_confusion_matrix(
+                cm=cm_part,
+                title=f'Confusion Matrix {partition.title()} ({translation_class_types[class_type]})',
+                xlabel='Predicted', ylabel='Actual',
+                output_path=os.path.join(base_output_dir, f'CMPart{partition.title()}{class_type.title()}.png'))
+        clearml_logger.report_table(
+            title=f'{partition.title()} Metrics ({translation_class_types[class_type]})',
+            series='', table_plot=part_metrics)
 
     # Metrics for Each environment
     for env_id, env_metrics in metrics['env'].items():
-        env_metrics_bin = env_metrics['bin']
-        env_metrics_mult = env_metrics['mult']
-
-        # Binary
-        if isinstance(env_metrics_bin, tuple):
-            env_metrics_bin, env_cm_bin = env_metrics_bin
-            plot_confusion_matrix(
-                cm=env_cm_bin,
-                title=f'Confusion Matrix {partition.title()} - Environment: {EYEPACS_ENV_MAP_INV[env_id]} (Binary)',
-                xlabel='Predicted', ylabel='Actual',
-                output_path=os.path.join(base_output_dir, f'CMEnv{env_id}{partition.title()}Bin.png'))
-        clearml_logger.report_table(
-            title=f'{partition.title()} Metrics - Environment: {EYEPACS_ENV_MAP_INV[env_id]} (Binary)',
-            series='', table_plot=env_metrics_bin)
-
-        if isinstance(env_metrics_mult, tuple):
-            env_metrics_mult, env_cm_mult = env_metrics_mult
-            plot_confusion_matrix(
-                cm=env_cm_mult,
-                title=f'Confusion Matrix {partition.title()} - Environment: {EYEPACS_ENV_MAP_INV[env_id]} (Multiclass)',
-                xlabel='Predicted', ylabel='Actual',
-                output_path=os.path.join(base_output_dir, f'CMEnv{env_id}{partition.title()}Mult.png'))
-        clearml_logger.report_table(
-            title=f'{partition.title()} Metrics - Environment: {EYEPACS_ENV_MAP_INV[env_id]} (Multiclass)',
-            series='', table_plot=env_metrics_mult)
+        for class_type in class_types:
+            env_part_metrics = env_metrics[class_type]
+            if isinstance(env_part_metrics, tuple):
+                env_part_metrics, cm_env = env_part_metrics
+                plot_confusion_matrix(
+                    cm=cm_env,
+                    title=f'Confusion Matrix {partition.title()}'
+                          f' - Environment: {EYEPACS_ENV_MAP_INV[env_id]} ({translation_class_types[class_type]})',
+                    xlabel='Predicted', ylabel='Actual',
+                    output_path=os.path.join(base_output_dir,
+                                             f'CMEnv{env_id}{partition.title()}{class_type.title()}.png'))
+            clearml_logger.report_table(
+                title=f'{partition.title()} Metrics'
+                      f' - Environment: {EYEPACS_ENV_MAP_INV[env_id]} ({translation_class_types[class_type]})',
+                series='', table_plot=env_part_metrics)
 
 
-def get_classification_metrics(y_true, y_pred, probs, include_cm=False, class_types=('bin', 'mult')):
+def get_classification_metrics(y_true, y_pred, probs, include_cm=False, class_types=('bin_out', 'mult')):
     return {
         class_type: get_metrics(y_true, y_pred, probs, class_type=class_type, include_cm=include_cm)
         for class_type in class_types}

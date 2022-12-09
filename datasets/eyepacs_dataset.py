@@ -42,7 +42,7 @@ class EyePacsDataset(Dataset):
             self.filename_array[idx])
         img = Image.open(img_filename).convert('RGB')
         img = self.transform(img)
-        return img, y, self.env_dict[eye_info]
+        return img, y, self.env_dict[eye_info], self.filename_array[idx]
 
 
 def get_eyepacs_dataloader(dataset_name, split, transform, root_dir, batch_size, num_workers):
