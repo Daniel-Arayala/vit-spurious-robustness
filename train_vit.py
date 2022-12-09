@@ -163,8 +163,9 @@ def train_model(args):
         )
         batch_loss_accum = 0  # Accumulates the average loss per split inside a batch
         for step, batch in enumerate(epoch_iterator):
-            batch = tuple(t.to(args.device) for t in batch)
             x, y, _, _ = batch
+            x = x.to(args.device, non_blocking=True)
+            y = y.to(args.device, non_blocking=True)
             logits = model(x)
             loss = cri(logits.view(-1, args.num_classes), y.view(-1))
             loss = loss / args.batch_split
