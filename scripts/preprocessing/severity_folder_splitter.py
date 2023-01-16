@@ -1,13 +1,10 @@
 import argparse
 import logging
 import os
-
-import os
-import pandas as pd
-import numpy as np
-from glob import glob
-from tqdm import tqdm
 import shutil
+
+import pandas as pd
+from tqdm import tqdm
 
 logging.basicConfig(
     format="[%(asctime)s] - %(levelname)s - %(name)s - %(message)s",
